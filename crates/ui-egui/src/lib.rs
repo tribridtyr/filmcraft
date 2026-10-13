@@ -214,6 +214,9 @@ pub struct FilmcraftApp {
     pub(crate) synthetic: Vec<egui::Event>,
     /// Frames left in which the real mouse is ignored after the last synthetic event.
     pub(crate) synthetic_hold: u8,
+    /// Modifiers an agent's pointer gesture is holding (as egui's frame-level `input.modifiers`),
+    /// released a few frames after its last event.
+    synthetic_mods: egui::Modifiers,
     /// The Text panel's transcript view, kept while the project, sequence and pause settings stay
     /// the same (pauses come from voice maps that would be wasteful to re-read every frame).
     pub(crate) transcript_view: Option<(TranscriptKey, Arc<filmcraft_engine::transcript::TranscriptView>)>,
@@ -424,6 +427,7 @@ impl FilmcraftApp {
             last_ui_time: 0.0,
             synthetic: Vec::new(),
             synthetic_hold: 0,
+            synthetic_mods: egui::Modifiers::NONE,
             transcript_view: None,
             loudness: None,
             status_seen: (String::new(), 0.0),
@@ -1606,7 +1610,25 @@ impl eframe::App for FilmcraftApp {
                     .position(|e| pointer(e) || matches!(e, egui::Event::Key { pressed: false, .. }))
                     .map_or(self.synthetic.len(), |i| if pointer(&self.synthetic[i]) { i.max(1) } else { i + 1 })
             };
-            raw_input.events.extend(self.synthetic.drain(..n));
+            let batch: Vec<egui::Event> = self.synthetic.drain(..n).collect();
+            // A held Shift/Option/Cmd is frame-level state in egui (`input.modifiers`), which is
+            // what the Timeline's tools read; a modifier carried only by the click event never
+            // reached it, so an agent's Option-click zoomed in like a plain click. Hold the
+            // gesture's modifiers for the frames it is delivered, as the real keys would be.
+            let held = batch.iter().find_map(|e| match e {
+                egui::Event::PointerButton { modifiers, .. } | egui::Event::MouseWheel { modifiers, .. } => Some(*modifiers),
+                _ => None,
+            });
+            if let Some(m) = held
+                && m != self.synthetic_mods
+            {
+                self.synthetic_mods = m;
+                raw_input.events.push(egui::Event::ModifiersChanged(m));
+            }
+            raw_input.events.extend(batch);
+        } else if self.synthetic_hold == 0 && self.synthetic_mods != egui::Modifiers::NONE {
+            self.synthetic_mods = egui::Modifiers::NONE;
+            raw_input.events.push(egui::Event::ModifiersChanged(egui::Modifiers::NONE));
         }
     }
 

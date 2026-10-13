@@ -1990,7 +1990,14 @@ fn interact(app: &mut FilmcraftApp, ui: &mut egui::Ui, seq: &Sequence, layout: &
                     .map(|i| i.id.0)
                     .collect();
                 let _ = app.session.execute("timeline.select", json!({"clips": ids}));
-                None
+                // Premiere: dragging after a track select moves what it selected, without
+                // switching back to the Selection tool first
+                if resp.drag_started() && !app.session.state.selection.is_empty() {
+                    let clips = app.session.state.selection.clone();
+                    Some(Drag::Move { clips, grab_tick: t, start_track: track, offset: Tick::ZERO, track_delta: 0 })
+                } else {
+                    None
+                }
             }
             (Tool::Selection | Tool::Ripple | Tool::Rolling, Grab::Edge { clip, edge, track, .. }) if resp.clicked() => {
                 // click an edge = select it as an edit point (trim mode); Shift adds
