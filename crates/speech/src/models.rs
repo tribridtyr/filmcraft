@@ -219,9 +219,11 @@ static CATALOGUE: &[ModelInfo] = &[
     },
 ];
 
-/// The default model: the most accurate one, which runs fast on the GPU (feature `metal`). A
-/// CPU-only build defaults to `whisper-base`, which keeps transcription faster than real time.
-pub const DEFAULT_MODEL: &str = if cfg!(feature = "metal") { "whisper-large-v3-turbo" } else { "whisper-base" };
+/// The default model in every build: Whisper large-v3-turbo, the most accurate one. It runs fast
+/// on the GPU (feature `metal`); a CPU-only build is slower (about 2x real time on an M4 Max) but
+/// still transcribes a clip in less than its length on a recent machine. Smaller models stay in
+/// the catalogue and in Settings for slow machines.
+pub const DEFAULT_MODEL: &str = "whisper-large-v3-turbo";
 
 pub fn catalogue() -> &'static [ModelInfo] {
     CATALOGUE

@@ -110,9 +110,9 @@ revision of OpenAI's Hugging Face repositories and checked against its SHA-256:
 | Id | Languages | Licence |
 |---|---|---|
 | `whisper-tiny` | multilingual | MIT (OpenAI); HF conversion Apache-2.0 |
-| `whisper-base` (default without `metal`) | multilingual | MIT (OpenAI); HF conversion Apache-2.0 |
+| `whisper-base` | multilingual | MIT (OpenAI); HF conversion Apache-2.0 |
 | `whisper-small` | multilingual | MIT (OpenAI); HF conversion Apache-2.0 |
-| `whisper-large-v3-turbo` (default with `metal`) | multilingual | MIT (OpenAI); HF conversion Apache-2.0 |
+| `whisper-large-v3-turbo` (default) | multilingual | MIT (OpenAI); HF conversion Apache-2.0 |
 
 The setting is stored as `mediaAnalysis.speechModel` (the older `whisperModel` key, which every
 saved preferences file filled with the old default, is ignored).

@@ -352,7 +352,7 @@ pub struct MediaAnalysisPrefs {
     pub default_language: String,
     /// Speech model (`transcript.models`). Stored as `speechModel`: the old `whisperModel` key
     /// held the former default (whisper-base) in every saved preferences file, so it is ignored
-    /// and the current default (large-v3-turbo with the GPU) applies until the user picks one.
+    /// and the current default (large-v3-turbo) applies until the user picks one.
     pub speech_model: String,
     /// Text panel ▸ Transcript View Options ▸ Pause length: the shortest silence shown and found
     /// as a pause (a tight pause cut reviews gaps down to 80 ms).
