@@ -483,6 +483,10 @@ pub struct UiState {
     /// The pause clicked in the transcript (index into the transcript's pauses).
     #[serde(default)]
     pub transcript_pause: Option<usize>,
+    /// Text panel ▸ Transcript: the segment being corrected (Edit Segment: Return, or a double
+    /// click on a word). Return commits it with `transcript.editWords`, Escape cancels.
+    #[serde(default)]
+    pub transcript_edit: Option<TranscriptEdit>,
     /// The Transcribe options (shown when Some).
     #[serde(default)]
     pub transcribe_dialog: Option<TranscribeDraft>,
@@ -588,6 +592,18 @@ pub struct UiState {
     /// Media Browser view state (tree, path field, Edit Columns…). See `panels::media_browser`.
     #[serde(default)]
     pub media_browser: crate::panels::media_browser::MediaBrowserUi,
+}
+
+/// The transcript text being corrected in place: the words `from..=to` (indices as
+/// `transcript.inspect` lists them) and what has been typed so far.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct TranscriptEdit {
+    pub from: usize,
+    pub to: usize,
+    pub text: String,
+    /// Just opened: the field takes keyboard focus on its first frame.
+    #[serde(default)]
+    pub fresh: bool,
 }
 
 /// An open Edit / Clip / File menu dialog: the engine command it runs on OK and the parameters
@@ -965,6 +981,7 @@ impl Default for UiState {
             transcript_hit: 0,
             transcript_lift: false,
             transcript_pause: None,
+            transcript_edit: None,
             transcribe_dialog: None,
             play_after_render: true,
             mixer_fx_open: false,

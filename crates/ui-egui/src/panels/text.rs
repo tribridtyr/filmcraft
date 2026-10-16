@@ -473,6 +473,11 @@ fn transcript(app: &mut FilmcraftApp, ui: &mut egui::Ui, rect: Rect) {
     let words = &v.words;
     let sel = app.ui.transcript_sel.filter(|(a, b)| *a < words.len() && *b < words.len());
     let (sa, sb) = sel.map(|(a, b)| (a.min(b), a.max(b))).unzip();
+    // the segment being corrected; gone when the transcript no longer has those words
+    if app.ui.transcript_edit.as_ref().is_some_and(|e| e.from > e.to || e.to >= words.len()) {
+        app.ui.transcript_edit = None;
+    }
+    let editing = app.ui.transcript_edit.clone();
     let filter = filter_of(app);
     let hits = filmcraft_engine::transcript::hits(&app.session, &v, filter, &app.ui.transcript_search, &json!({}));
     let current = (!hits.is_empty()).then(|| app.ui.transcript_hit.min(hits.len() - 1));
@@ -775,6 +780,12 @@ fn transcript(app: &mut FilmcraftApp, ui: &mut egui::Ui, rect: Rect) {
                 ui.spacing_mut().item_spacing = vec2(4.0, 3.0);
                 for tok in para {
                     match *tok {
+                        Token::Word(i) if editing.as_ref().is_some_and(|e| (e.from..=e.to).contains(&i)) => {
+                            if let Some(e) = editing.as_ref().filter(|e| e.from == i) {
+                                let original = words.get(e.from..=e.to).unwrap_or_default().iter().map(|w| w.text.as_str()).collect::<Vec<_>>().join(" ");
+                                edit_field(app, ui, e, &original, &mut actions);
+                            }
+                        }
                         Token::Word(i) => {
                             let w = &words[i];
                             let in_sel = sa.is_some_and(|a| i >= a) && sb.is_some_and(|b| i <= b);
@@ -792,7 +803,12 @@ fn transcript(app: &mut FilmcraftApp, ui: &mut egui::Ui, rect: Rect) {
                             if scroll_to_hit && h.is_some() && h == current {
                                 resp.scroll_to_me(Some(egui::Align::Center));
                             }
-                            if resp.clicked() {
+                            if resp.double_clicked() {
+                                let (a, b) = super::keyboard::edit_range(words, None, i);
+                                let text = words.get(a..=b).unwrap_or_default().iter().map(|w| w.text.as_str()).collect::<Vec<_>>().join(" ");
+                                app.ui.transcript_sel = Some((a, b));
+                                app.ui.transcript_edit = Some(crate::state::TranscriptEdit { from: a, to: b, text, fresh: true });
+                            } else if resp.clicked() {
                                 let shift = ui.input(|inp| inp.modifiers.shift);
                                 app.ui.transcript_sel = Some(match (shift, sel) {
                                     (true, Some((a, _))) => (a, i),
@@ -900,6 +916,36 @@ fn style_strip(app: &mut FilmcraftApp, ui: &mut egui::Ui, r: Rect, track_idx: us
             }
         }
     });
+}
+
+/// The text field that stands in for the words being corrected (Edit Segment). Return, or clicking
+/// elsewhere, keeps the change (`transcript.editWords`); Escape drops it. Words the text still
+/// has keep their times, so fixing one word never moves the rest.
+fn edit_field(app: &mut FilmcraftApp, ui: &mut egui::Ui, e: &crate::state::TranscriptEdit, original: &str, actions: &mut Vec<(String, Value)>) {
+    let mut text = e.text.clone();
+    let id = egui::Id::new("transcript-edit-field");
+    let out = egui::TextEdit::singleline(&mut text).id(id).font(egui::FontId::proportional(13.0)).desired_width(ui.available_width().max(160.0)).show(ui);
+    app.auto.add("text.transcript.edit", out.response.rect, "Edit segment text");
+    if e.fresh {
+        out.response.request_focus();
+    }
+    if let Some(cur) = app.ui.transcript_edit.as_mut() {
+        cur.fresh = false;
+        if cur.text != text {
+            cur.text = text.clone();
+        }
+    }
+    let escape = ui.input(|i| i.key_pressed(egui::Key::Escape));
+    if !out.response.lost_focus() && !(escape && out.response.has_focus()) {
+        return;
+    }
+    app.ui.transcript_edit = None;
+    let words = text.split_whitespace().count();
+    if escape || words == 0 || text.split_whitespace().eq(original.split_whitespace()) {
+        return;
+    }
+    app.ui.transcript_sel = Some((e.from, e.from + words - 1));
+    actions.push(("transcript.editWords".into(), json!({"from": e.from, "to": e.to, "text": text})));
 }
 
 fn run(app: &mut FilmcraftApp, ui: &egui::Ui, actions: Vec<(String, Value)>) {

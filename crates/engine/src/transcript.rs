@@ -495,6 +495,53 @@ fn set(s: &mut Session, p: &Value) -> Result<Value> {
     Ok(json!({"item": item.0, "words": n}))
 }
 
+/// The most words one `transcript.editWords` call may write (a hostile or runaway paste).
+const MAX_EDIT_WORDS: usize = 4_000;
+
+/// `transcript.editWords`: correct the text of the words `from..=to` (sequence word indices, as
+/// `transcript.inspect` lists them) without touching the picture or sound: Premiere's Edit
+/// Segment. The new text is split on spaces. A word that stays the same word (ignoring case and
+/// punctuation) keeps its exact times, so fixing one word of a long segment moves nothing else; a
+/// changed run takes the old run's times (see `filmcraft_project::transcript::retime_edit`).
+/// Corrected words have confidence 1. The range has to lie in one clip's transcript
+/// (neighbouring words of one recording).
+fn edit_words(s: &mut Session, p: &Value) -> Result<Value> {
+    const CMD: &str = "transcript.editWords";
+    let text = str_p(p, "text").ok_or_else(|| bad(CMD, "`text` is required"))?;
+    let new: Vec<&str> = text.split_whitespace().collect();
+    if new.is_empty() {
+        return Err(bad(CMD, "`text` has no words (to remove words, extract or lift them)"));
+    }
+    if new.len() > MAX_EDIT_WORDS {
+        return Err(bad(CMD, format!("at most {MAX_EDIT_WORDS} words at a time")));
+    }
+    let words = sequence_words(s);
+    let from = u64_p(p, "from").ok_or_else(|| bad(CMD, "`from` (word index) is required"))? as usize;
+    let to = u64_p(p, "to").map(|n| n as usize).unwrap_or(from);
+    let (from, to) = (from.min(to), from.max(to));
+    let Some(range) = words.get(from..=to) else {
+        return Err(bad(CMD, format!("word index out of range (the transcript has {} words)", words.len())));
+    };
+    let (Some(first), Some(last)) = (range.first(), range.last()) else { return Err(bad(CMD, "no words selected")) };
+    let item = first.item;
+    let (a, b) = (first.index, last.index);
+    let one_recording = range.iter().all(|w| w.item == item) && range.iter().enumerate().all(|(k, w)| a.checked_add(k) == Some(w.index)) && b >= a;
+    if !one_recording {
+        return Err(bad(CMD, "the selection spans more than one clip: edit one clip's words at a time"));
+    }
+    let mut t: Transcript = s.project.transcripts.get(&item).map(|t| (**t).clone()).ok_or_else(|| bad(CMD, "no transcript for those words"))?;
+    let Some(old) = t.words.get(a..=b) else { return Err(bad(CMD, "the transcript changed; select the words again")) };
+    let made = filmcraft_project::transcript::retime_edit(old, &new);
+    let n = made.len();
+    t.words.splice(a..=b, made);
+    t.check().map_err(|e| bad(CMD, e))?;
+    s.edit("Edit Transcript Text", move |pr, _| {
+        pr.transcripts.insert(item, Arc::new(t));
+        Ok(())
+    })?;
+    Ok(json!({"item": item.0, "from": from, "to": from + n - 1, "words": n}))
+}
+
 fn delete(s: &mut Session, p: &Value) -> Result<Value> {
     let items: Vec<ItemId> = match ids_p(p, "items").or_else(|| u64_p(p, "item").map(|i| vec![ItemId(i)])) {
         Some(v) => v.into_iter().filter_map(|i| media_item(s, i)).collect(),
@@ -980,6 +1027,7 @@ pub fn commands() -> Vec<CommandSpec> {
         spec("transcript.models", "List Speech Models", &[], "{}", always, models, false),
         spec("transcript.downloadModel", "Download Speech Model", &[], r#"{"model":"whisper-base"?}"#, can_download, download_model, true),
         spec("transcript.select", "Mark Selected Text", &[], r#"{"from":word,"to":word?}"#, has_transcript, select, true),
+        spec("transcript.editWords", "Edit Transcript Text", &[], r#"{"from":word,"to":word?,"text":str}"#, has_transcript, edit_words, true),
         spec("transcript.extract", "Extract Selected Text", &[], r#"{"from":word,"to":word?}"#, has_transcript, |s, p| extract_or_lift(s, p, true), true),
         spec("transcript.lift", "Lift Selected Text", &[], r#"{"from":word,"to":word?}"#, has_transcript, |s, p| extract_or_lift(s, p, false), true),
         spec(

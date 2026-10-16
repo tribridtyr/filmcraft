@@ -126,6 +126,7 @@ pub const COMMANDS: &[UiCommand] = &[
     uic!("textPanel.segmentEnd", "Navigate to End of Segment", [], None),
     uic!("textPanel.selectToSegmentStart", "Select to Segment Start", [], None),
     uic!("textPanel.selectToSegmentEnd", "Select to Segment End", [], None),
+    uic!("textPanel.editSegment", "Edit Segment", [], None),
     uic!("textPanel.delete", "Delete", [], None),
     uic!("textPanel.rippleDelete", "Ripple Delete", [], None),
     uic!("textPanel.showProgramTranscript", "Show Program Transcript", [], None),
@@ -458,6 +459,34 @@ fn project_panel(app: &mut FilmcraftApp, op: &str) -> Result<Value, String> {
 
 // ------------------------------------------------------------------ Text panel (transcript)
 
+/// The words Edit Segment opens: the selection when it covers several words, else the segment
+/// (paragraph) around the word `cur`. Either is cut back to one clip's consecutive words, because
+/// `transcript.editWords` corrects one recording at a time.
+pub(crate) fn edit_range(words: &[filmcraft_edit::transcript::SeqWord], sel: Option<(usize, usize)>, cur: usize) -> (usize, usize) {
+    let Some(last) = words.len().checked_sub(1) else { return (0, 0) };
+    let (a, b) = sel.map_or((cur, cur), |(a, b)| (a.min(b), a.max(b)));
+    let (a, b) = (a.min(last), b.min(last));
+    let joined = |i: usize| match (words.get(i), words.get(i + 1)) {
+        (Some(x), Some(y)) => x.item == y.item && x.index.checked_add(1) == Some(y.index),
+        _ => false,
+    };
+    let (lo, hi) = if a != b {
+        (a, b)
+    } else {
+        let paras = filmcraft_edit::transcript::paragraphs(words, filmcraft_time::Tick::from_seconds_f64(1.5));
+        paras.iter().find(|p| p.contains(&a)).map_or((a, a), |p| (p.start, p.end.saturating_sub(1).max(a)))
+    };
+    let mut start = a;
+    while start > lo && joined(start - 1) {
+        start -= 1;
+    }
+    let mut end = a;
+    while end < hi && joined(end) {
+        end += 1;
+    }
+    (start, end)
+}
+
 fn text_panel(app: &mut FilmcraftApp, op: &str) -> Result<Value, String> {
     if op == "showProgramTranscript" {
         app.show_panel(PanelKind::Text);
@@ -502,6 +531,17 @@ fn text_panel(app: &mut FilmcraftApp, op: &str) -> Result<Value, String> {
         "segmentEnd" => (para(cur).end.saturating_sub(1), false),
         "selectToSegmentStart" => (para(cur).start, true),
         "selectToSegmentEnd" => (para(cur).end.saturating_sub(1), true),
+        "editSegment" => {
+            // Return in the field that is already open commits it (the field handles that key)
+            if app.ui.transcript_edit.is_some() {
+                return Ok(Value::Null);
+            }
+            let (a, b) = edit_range(&words, app.ui.transcript_sel, cur);
+            let text = words.get(a..=b).unwrap_or_default().iter().map(|w| w.text.as_str()).collect::<Vec<_>>().join(" ");
+            app.ui.transcript_sel = Some((a, b));
+            app.ui.transcript_edit = Some(crate::state::TranscriptEdit { from: a, to: b, text, fresh: true });
+            return Ok(json!({"from": a, "to": b}));
+        }
         "delete" | "rippleDelete" => {
             // a clicked pause: Backspace extracts it, Alt+Backspace lifts it
             if app.ui.transcript_sel.is_none()

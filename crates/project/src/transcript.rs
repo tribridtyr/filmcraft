@@ -167,12 +167,231 @@ impl Transcript {
     }
 }
 
+/// The most cells (old words x new words) [`retime_edit`] aligns; a bigger edit is shared out by
+/// letters instead, which is slower to be exact about but needs no table.
+const ALIGN_CELLS: usize = 4_000_000;
+
+/// Words that stay the same through an edit: pairs `(old index, new index)` of a longest common
+/// subsequence of the two key lists (empty keys never match).
+fn aligned(old: &[String], new: &[String]) -> Vec<(usize, usize)> {
+    let (n, m) = (old.len(), new.len());
+    if n.saturating_mul(m) > ALIGN_CELLS {
+        return Vec::new();
+    }
+    let w = m + 1;
+    // lcs[i * w + j]: longest common subsequence of old[i..] and new[j..]
+    let mut lcs = vec![0u32; (n + 1) * w];
+    let same = |i: usize, j: usize| matches!((old.get(i), new.get(j)), (Some(a), Some(b)) if !a.is_empty() && a == b);
+    for i in (0..n).rev() {
+        for j in (0..m).rev() {
+            let v = if same(i, j) {
+                lcs.get((i + 1) * w + j + 1).copied().unwrap_or(0) + 1
+            } else {
+                lcs.get((i + 1) * w + j).copied().unwrap_or(0).max(lcs.get(i * w + j + 1).copied().unwrap_or(0))
+            };
+            if let Some(c) = lcs.get_mut(i * w + j) {
+                *c = v;
+            }
+        }
+    }
+    let (mut i, mut j) = (0, 0);
+    let mut pairs = Vec::new();
+    while i < n && j < m {
+        let here = lcs.get(i * w + j).copied().unwrap_or(0);
+        if same(i, j) && here == lcs.get((i + 1) * w + j + 1).copied().unwrap_or(0) + 1 {
+            pairs.push((i, j));
+            i += 1;
+            j += 1;
+        } else if lcs.get((i + 1) * w + j).copied().unwrap_or(0) >= lcs.get(i * w + j + 1).copied().unwrap_or(0) {
+            i += 1;
+        } else {
+            j += 1;
+        }
+    }
+    pairs
+}
+
+/// Splits the span `(start, end)` into one consecutive piece per text, by letters (a word counts
+/// at least one letter). The pieces meet without gaps and the last ends at `end`.
+fn share_span(span: (Tick, Tick), texts: &[&str]) -> Vec<(Tick, Tick)> {
+    let (start, end) = (span.0.0 as i128, (span.1.0 as i128).max(span.0.0 as i128));
+    let weights: Vec<i128> = texts.iter().map(|t| t.chars().count().max(1) as i128).collect();
+    let total = weights.iter().sum::<i128>().max(1);
+    let tick = |v: i128| Tick(v.clamp(i64::MIN as i128, i64::MAX as i128) as i64);
+    let mut at = 0i128;
+    let mut out = Vec::with_capacity(texts.len());
+    for (k, wt) in weights.iter().enumerate() {
+        let a = start + (end - start) * at / total;
+        at += wt;
+        let b = if k + 1 == weights.len() { end } else { start + (end - start) * at / total };
+        out.push((tick(a), tick(b)));
+    }
+    out
+}
+
+/// The words that replace `old` when its text is corrected to `new` (already split into words).
+///
+/// A word that stays the same word (ignoring case and punctuation) keeps its exact times, so
+/// fixing one word of a long segment leaves every other word where it was. A run of changed words
+/// takes the times of the old run: one for one when the counts match, otherwise the old span
+/// shared out by letters. Words with no old counterpart (an insertion) take their time from the
+/// word before, or the word after at the very start. Corrected words have confidence 1; speakers
+/// come from the nearest old word. Empty when either side is empty.
+pub fn retime_edit(old: &[Word], new: &[&str]) -> Vec<Word> {
+    if old.is_empty() || new.is_empty() {
+        return Vec::new();
+    }
+    struct Slot {
+        text: String,
+        span: Option<(Tick, Tick)>,
+        speaker: Option<u32>,
+    }
+    let keys_old: Vec<String> = old.iter().map(|w| normalize_word(&w.text)).collect();
+    let keys_new: Vec<String> = new.iter().map(|w| normalize_word(w)).collect();
+    let mut pairs = aligned(&keys_old, &keys_new);
+    pairs.push((old.len(), new.len()));
+    let mut slots: Vec<Slot> = Vec::with_capacity(new.len());
+    let (mut pi, mut pj) = (0usize, 0usize);
+    for (i, j) in pairs {
+        let run_old = old.get(pi..i).unwrap_or_default();
+        let run_new = new.get(pj..j).unwrap_or_default();
+        match (run_old.first(), run_old.last()) {
+            (Some(f), Some(l)) if !run_new.is_empty() => {
+                let spans: Vec<(Tick, Tick)> =
+                    if run_old.len() == run_new.len() { run_old.iter().map(|w| (w.start, w.end)).collect() } else { share_span((f.start, l.end), run_new) };
+                for (k, (t, span)) in run_new.iter().zip(spans).enumerate() {
+                    let speaker = run_old.get(k).map_or(f.speaker, |w| w.speaker);
+                    slots.push(Slot { text: (*t).to_string(), span: Some(span), speaker });
+                }
+            }
+            _ => {
+                for t in run_new {
+                    slots.push(Slot { text: (*t).to_string(), span: None, speaker: None });
+                }
+            }
+        }
+        if let (Some(o), Some(t)) = (old.get(i), new.get(j)) {
+            slots.push(Slot { text: (*t).to_string(), span: Some((o.start, o.end)), speaker: o.speaker });
+        }
+        pi = i + 1;
+        pj = j + 1;
+    }
+    // insertions: share the neighbouring word's span between it and the new words
+    let mut k = 0;
+    while k < slots.len() {
+        if slots.get(k).is_some_and(|s| s.span.is_some()) {
+            k += 1;
+            continue;
+        }
+        let end = (k..slots.len()).find(|&x| slots.get(x).is_some_and(|s| s.span.is_some())).unwrap_or(slots.len());
+        let before = k.checked_sub(1).filter(|&b| slots.get(b).is_some_and(|s| s.span.is_some()));
+        let (neighbour, first) = match before {
+            Some(b) => (Some(b), b),
+            None => (slots.get(end).and_then(|s| s.span).map(|_| end), k),
+        };
+        let last = if neighbour == Some(end) { end } else { end.saturating_sub(1).max(first) };
+        let group: Vec<&str> = slots.get(first..=last.min(slots.len().saturating_sub(1))).unwrap_or_default().iter().map(|s| s.text.as_str()).collect();
+        let span = neighbour.and_then(|n| slots.get(n)).and_then(|s| s.span).unwrap_or((Tick::ZERO, Tick::ZERO));
+        let speaker = neighbour.and_then(|n| slots.get(n)).and_then(|s| s.speaker);
+        let pieces = share_span(span, &group);
+        for (x, piece) in (first..).zip(pieces) {
+            if let Some(slot) = slots.get_mut(x) {
+                slot.span = Some(piece);
+                if slot.speaker.is_none() {
+                    slot.speaker = speaker;
+                }
+            }
+        }
+        k = last.saturating_add(1).max(k + 1);
+    }
+    slots
+        .into_iter()
+        .map(|s| {
+            let (a, b) = s.span.unwrap_or((Tick::ZERO, Tick::ZERO));
+            let mut w = Word::new(s.text, a, b.max(a));
+            w.speaker = s.speaker;
+            w
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     fn w(t: &str, a: i64, b: i64) -> Word {
         Word::new(t, Tick(a), Tick(b))
+    }
+
+    fn times(ws: &[Word]) -> Vec<(i64, i64)> {
+        ws.iter().map(|w| (w.start.0, w.end.0)).collect()
+    }
+    fn texts(ws: &[Word]) -> Vec<&str> {
+        ws.iter().map(|w| w.text.as_str()).collect()
+    }
+    fn well_formed(ws: Vec<Word>) {
+        let speakers = vec![Speaker { name: "A".into() }, Speaker { name: "B".into() }];
+        let t = Transcript { words: ws, speakers, ..Default::default() };
+        t.check().unwrap();
+    }
+
+    #[test]
+    fn retime_keeps_every_unchanged_word_where_it_was() {
+        let old = [w("Hello", 0, 10), w("um", 12, 20), w("world.", 20, 30)];
+        // case and punctuation are the same word: the times stay, the text is the new text
+        let out = retime_edit(&old, &["hello", "uh", "World!"]);
+        assert_eq!(texts(&out), ["hello", "uh", "World!"]);
+        assert_eq!(times(&out), [(0, 10), (12, 20), (20, 30)]);
+        assert!(out.iter().all(|w| w.confidence == 1.0));
+        well_formed(out);
+        // deleting a word leaves the others exactly where they were (the gap becomes a pause)
+        let out = retime_edit(&old, &["Hello", "world."]);
+        assert_eq!(times(&out), [(0, 10), (20, 30)]);
+    }
+
+    #[test]
+    fn retime_shares_a_changed_run_and_takes_insertions_from_a_neighbour() {
+        let mut old = vec![w("one", 0, 10), w("two", 10, 30), w("three", 30, 40)];
+        old[0].speaker = Some(0);
+        old[1].speaker = Some(1);
+        // a changed run with another count: the old span shared out by letters, ends kept
+        let out = retime_edit(&old[1..2], &["a", "bb", "ccc"]);
+        assert_eq!(out.first().map(|w| w.start.0), Some(10));
+        assert_eq!(out.last().map(|w| w.end.0), Some(30));
+        assert!(out.windows(2).all(|p| p[0].end == p[1].start));
+        assert!(out.iter().all(|w| w.speaker == Some(1)));
+        well_formed(out);
+        // an insertion in the middle: the word before gives up the tail of its span
+        let out = retime_edit(&old, &["one", "two", "extra", "three"]);
+        assert_eq!(texts(&out), ["one", "two", "extra", "three"]);
+        assert_eq!((times(&out)[0], times(&out)[3]), ((0, 10), (30, 40)), "the other words do not move");
+        assert_eq!((out[1].start.0, out[2].end.0), (10, 30), "together they cover what 'two' covered");
+        assert_eq!(out[1].end, out[2].start);
+        assert_eq!(out[2].speaker, Some(1));
+        well_formed(out);
+        // an insertion at the very start takes the head of the word after it
+        let out = retime_edit(&old, &["well", "one", "two", "three"]);
+        assert_eq!(times(&out)[1..], [(times(&out)[1].0, 10), (10, 30), (30, 40)]);
+        assert_eq!((out[0].start.0, out[1].end.0), (0, 10));
+        assert_eq!(out[0].speaker, Some(0));
+        well_formed(out);
+    }
+
+    #[test]
+    fn retime_survives_empty_and_huge_input() {
+        assert!(retime_edit(&[], &["x"]).is_empty());
+        assert!(retime_edit(&[w("a", 0, 1)], &[]).is_empty());
+        // zero-length and reversed words, and punctuation-only words, never panic
+        let odd = [w("--", 5, 5), w("--", 5, 5), w("x", 9, 2)];
+        well_formed(retime_edit(&odd, &["--", "y", "--", "--"]));
+        // bigger than the alignment table: shared out by letters, still well formed
+        let old: Vec<Word> = (0..2100).map(|i| w("a", i * 10, i * 10 + 10)).collect();
+        let new_text: Vec<String> = (0..2100).map(|_| "b".into()).collect();
+        let new: Vec<&str> = new_text.iter().map(String::as_str).collect();
+        let out = retime_edit(&old, &new);
+        assert_eq!(out.len(), 2100);
+        assert_eq!((out[0].start.0, out[2099].end.0), (0, 21_000));
+        well_formed(out);
     }
 
     #[test]

@@ -324,3 +324,89 @@ fn transcribing_a_selected_sequence_transcribes_its_media() {
     assert_eq!(r["items"][0]["item"], json!(item.0), "the sequence's audio media: {r}");
     assert_eq!(s.project.transcripts[&item].words.len(), 6);
 }
+
+#[test]
+fn edit_words_corrects_text_and_keeps_the_timing() {
+    let (mut s, item, _) = session();
+    s.execute("transcript.generate", json!({"items": [item.0]})).unwrap();
+    let before = s.project.transcripts[&item].words.clone();
+
+    // same number of words: each keeps its own times, speaker and the picture and sound are untouched
+    let timeline = s.active_sequence().unwrap().duration();
+    let r = s.execute("transcript.editWords", json!({"from": 0, "to": 2, "text": "Hallo uh world!"})).unwrap();
+    assert_eq!((r["from"].as_u64(), r["to"].as_u64(), r["words"].as_u64()), (Some(0), Some(2), Some(3)), "{r}");
+    assert_eq!(words(&mut s), ["Hallo", "uh", "world!", "Second", "speaker", "here."]);
+    let after = &s.project.transcripts[&item].words;
+    for k in 0..6 {
+        assert_eq!((after[k].start, after[k].end, after[k].speaker), (before[k].start, before[k].end, before[k].speaker), "word {k}");
+    }
+    assert!(after.iter().all(|w| w.confidence == 1.0));
+    assert_eq!(s.active_sequence().unwrap().duration(), timeline, "editing text never edits the timeline");
+
+    // it is one undo step
+    s.execute("edit.undo", json!({})).unwrap();
+    assert_eq!(words(&mut s), ["Hello", "um", "world.", "Second", "speaker", "here."]);
+}
+
+#[test]
+fn edit_words_with_another_word_count_moves_only_the_changed_words() {
+    let (mut s, item, _) = session();
+    s.execute("transcript.generate", json!({"items": [item.0]})).unwrap();
+    let before = s.project.transcripts[&item].words.clone();
+
+    // three words become four: "Second speaker here." -> "Second speaker over here."
+    let r = s.execute("transcript.editWords", json!({"from": 3, "to": 5, "text": "  Second speaker\nover   here. "})).unwrap();
+    assert_eq!((r["from"].as_u64(), r["to"].as_u64(), r["words"].as_u64()), (Some(3), Some(6), Some(4)), "{r}");
+    assert_eq!(words(&mut s), ["Hello", "um", "world.", "Second", "speaker", "over", "here."]);
+    let w = &s.project.transcripts[&item].words;
+    assert_eq!(w.len(), 7);
+    // words that stay the same word keep their exact times and speaker
+    for (new_at, old_at) in [(3, 3), (6, 5)] {
+        assert_eq!((w[new_at].start, w[new_at].end, w[new_at].speaker), (before[old_at].start, before[old_at].end, before[old_at].speaker), "word {new_at}");
+    }
+    assert_eq!(w[4].start, before[4].start, "'speaker' still starts where it did");
+    assert_eq!(w[5].end, before[4].end, "and 'over' ends where 'speaker' ended: it took the tail");
+    assert_eq!(w[4].end, w[5].start);
+    assert!(w[4].end > w[4].start && w[5].end > w[5].start, "neither is empty");
+    assert_eq!(w[5].speaker, before[4].speaker);
+    assert!(w[..3].iter().zip(&before[..3]).all(|(a, b)| a.start == b.start && a.end == b.end), "the words before are untouched");
+
+    // fewer words
+    s.execute("transcript.editWords", json!({"from": 3, "to": 6, "text": "Hi"})).unwrap();
+    assert_eq!(words(&mut s), ["Hello", "um", "world.", "Hi"]);
+    let w = &s.project.transcripts[&item].words;
+    assert_eq!((w[3].start, w[3].end), (before[3].start, before[5].end));
+
+    // the corrected text is what search finds
+    let r = s.execute("transcript.search", json!({"query": "world. hi"})).unwrap();
+    assert_eq!(r["matches"].as_array().unwrap().len(), 1, "{r}");
+}
+
+#[test]
+fn edit_words_refuses_bad_input_without_changing_anything() {
+    let (mut s, item, _) = session();
+    assert!(s.execute("transcript.editWords", json!({"from": 0, "text": "x"})).is_err(), "disabled before transcribing");
+    s.execute("transcript.generate", json!({"items": [item.0]})).unwrap();
+    let undo = s.history.undo.len();
+    let before = s.project.transcripts[&item].words.clone();
+    for bad in [
+        json!({"text": "x"}),
+        json!({"from": 0}),
+        json!({"from": 0, "text": ""}),
+        json!({"from": 0, "text": "   \n "}),
+        json!({"from": 6, "text": "x"}),
+        json!({"from": 0, "to": 99, "text": "x"}),
+        json!({"from": 0, "to": u64::MAX, "text": "x"}),
+        json!({"from": u64::MAX, "text": "x"}),
+        json!({"from": 0, "text": "word ".repeat(5_000)}),
+        json!({"from": "a", "text": "x"}),
+        json!({"from": 0, "text": 7}),
+    ] {
+        assert!(s.execute("transcript.editWords", bad.clone()).is_err(), "{bad} must be refused");
+    }
+    assert_eq!(s.project.transcripts[&item].words, before);
+    assert_eq!(s.history.undo.len(), undo, "a refused edit leaves no undo step");
+    // reversed bounds are read as the same range
+    s.execute("transcript.editWords", json!({"from": 2, "to": 0, "text": "A b c"})).unwrap();
+    assert_eq!(&words(&mut s)[..3], ["A", "b", "c"]);
+}

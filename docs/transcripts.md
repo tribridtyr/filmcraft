@@ -32,6 +32,7 @@ the control channel and MCP agents can do the same.
 | `transcript.inspect` | The sequence transcript: words (index, text, sequence times, speaker, clip), paragraphs, speakers, the word at the playhead. |
 | `transcript.search` | Word-index ranges matching a phrase (case and punctuation ignored; the last word may be a prefix). |
 | `transcript.select` | Mark In/Out around words `from..=to` (frame-snapped outward) and move the playhead there. |
+| `transcript.editWords` | Correct the text of words `from..=to` (`text`, split on spaces) without touching the timeline: Premiere's Edit Segment. Words that stay the same word (ignoring case and punctuation) keep their exact times; a changed run takes the old run's times (one for one when the counts match, else shared out by letters); inserted words take their time from the neighbouring word. Corrected words have confidence 1. The words must be consecutive words of one clip. One undo step. |
 | `transcript.extract` / `transcript.lift` | Extract (ripple) or lift the words' frames on the targeted tracks. |
 | `transcript.renameSpeaker` | Rename a speaker by name (every transcript) or by index in one `item`. |
 | `transcript.findRepeats` | Find retakes (read-only): pairs of word runs where a later run (starting within `windowSeconds`, default 45, of the earlier) opens with the same words, compared normalised (case, punctuation and fillers ignored): an identical opening of at least `minWords` (default 3), or for runs of 5+ words one word substituted, dropped or added. Openings of only common words, back-to-back emphasis of a phrase of up to 3 words, and pairs with far more speech between them than they share are skipped. Each hit gives the earlier attempt (`earlier`: word range, text, `complete` when it ended a sentence), the later reading (`later`: first word, ~12 words), and `cut` `{from, to}` word indices (the abandoned attempt, up to the later reading's first word) usable directly by `transcript.extract`. The earlier attempt is always the one cut: the last complete reading stays. `from`/`to` (seconds) limit where runs may start. |
@@ -71,7 +72,7 @@ voice. The search row has the **filter** (Transcript text / Filler words / Pause
 count ("3 of 20") and ▲ ▼; **Delete** removes the current result and **Delete all** every one,
 with **Extract** (close the gaps) or **Lift** (leave them). The "…" menu holds the pause settings,
 Re-transcribe and Create captions. Clicking a pause selects it; Backspace extracts it and
-Alt+Backspace lifts it. Sequence ▸ Transcribe Sequence… opens the same options.
+Alt+Backspace lifts it. **Return** (Edit Segment) or a double click on a word turns the selected words (or, with one word selected, its whole segment) into a text field: type the correction and press Return to keep it (`transcript.editWords`), Escape to cancel. Sequence ▸ Transcribe Sequence… opens the same options.
 
 ## Speech recognition
 
