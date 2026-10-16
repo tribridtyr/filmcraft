@@ -14,47 +14,49 @@ The MCP tool `ui_map` searches the map (`prefix`, `panel`, `kind`, free-text `qu
 cargo test -p filmcraft-ui-egui --test ui_map_crawl -- --ignored
 ```
 
-The crawl opens the demo project in a 1920×1200 window and visits the start screen, Import and Export mode and every panel (each also with a video clip, an audio clip and a new graphic selected), and invokes every menu command (with a selection when it needs one). It clicks every element it finds on a fresh app, right-clicks those on screen at first (context menus), and clicks what each click reveals (popups, dialogs, tabs) up to three clicks deep. The apps use sandboxed host services and a scratch data directory: none of your files or settings are read or written. The normal-run test `every_visible_element_and_menu_command_runs_without_a_panic` clicks everything on screen at first and runs every menu command without writing the map; any panic fails it.
+The crawl opens the demo project in a 1920×1200 window and visits the start screen, Import and Export mode and every panel, also maximized, each with a video clip, an audio clip or a new graphic selected, plus a few prepared states (audio effects with their editors, a mask, mixer inserts and sends, a transcript, a caption track, a bin's items in each Project view), and invokes every menu command (with a selection when it needs one). It clicks every element it finds on a fresh app, right-clicks those on screen at first (context menus), and clicks what each click reveals (popups, dialogs, tabs) up to three clicks deep. The apps use sandboxed host services and a scratch data directory: none of your files or settings are read or written. The normal-run test `every_visible_element_and_menu_command_runs_without_a_panic` clicks everything on screen at first and runs every menu command without writing the map; any panic fails it.
 
-Last crawl: 749 jobs; 3842 entries (3441 elements, 372 menu commands); 42 dialogs; 0 panics.
+Last crawl: 6432 jobs; 7215 entries (5886 elements, 372 menu commands); 69 dialogs; 0 panics.
 
 ## Coverage
 
 | Where | Entries | Clicked | Dead | Not clicked | With a command |
 |---|---:|---:|---:|---:|---:|
-| Audio Clip Mixer | 18 | 10 | 5 | 8 | 2 |
-| Audio Meters | 24 | 5 | 0 | 19 | 3 |
-| Audio Track Mixer | 64 | 28 | 10 | 36 | 9 |
-| Dialogs | 2357 | 0 | 0 | 2357 | 1831 |
-| Dock | 19 | 7 | 6 | 12 | 0 |
-| Effect Controls | 6 | 3 | 1 | 3 | 0 |
-| Effects | 86 | 22 | 11 | 64 | 0 |
-| Essential Graphics | 27 | 18 | 3 | 9 | 0 |
-| Essential Sound | 29 | 5 | 3 | 24 | 0 |
-| Events | 11 | 5 | 2 | 6 | 1 |
-| Export mode | 200 | 39 | 8 | 161 | 2 |
-| Header | 36 | 13 | 4 | 23 | 5 |
-| History | 7 | 4 | 2 | 3 | 0 |
+| Audio Clip Mixer | 18 | 18 | 5 | 0 | 2 |
+| Audio Meters | 5 | 5 | 5 | 0 | 0 |
+| Audio Track Mixer | 347 | 323 | 47 | 24 | 216 |
+| Dialogs | 3166 | 1225 | 316 | 1941 | 1928 |
+| Dock | 24 | 24 | 9 | 0 | 0 |
+| Effect Controls | 742 | 524 | 113 | 218 | 269 |
+| Effects | 336 | 303 | 251 | 33 | 0 |
+| Essential Graphics | 75 | 68 | 8 | 7 | 22 |
+| Essential Sound | 111 | 93 | 54 | 18 | 25 |
+| Events | 11 | 11 | 2 | 0 | 1 |
+| Export mode | 287 | 233 | 43 | 54 | 15 |
+| Floating window | 51 | 50 | 5 | 1 | 34 |
+| Header | 36 | 36 | 6 | 0 | 6 |
+| History | 9 | 9 | 3 | 0 | 0 |
 | Import mode | 8 | 8 | 4 | 0 | 4 |
-| Info | 6 | 3 | 1 | 3 | 0 |
-| Libraries | 6 | 3 | 1 | 3 | 0 |
-| Lumetri Color | 6 | 3 | 2 | 3 | 0 |
-| Lumetri Scopes | 26 | 7 | 3 | 19 | 0 |
-| Markers | 14 | 11 | 1 | 3 | 7 |
-| Media Browser | 48 | 25 | 10 | 23 | 10 |
-| Menu bar | 372 | 369 | 24 | 3 | 372 |
-| Metadata | 7 | 4 | 2 | 3 | 0 |
-| Program | 113 | 22 | 0 | 91 | 38 |
-| Progress | 7 | 4 | 2 | 3 | 0 |
-| Project | 84 | 20 | 0 | 64 | 18 |
-| Properties | 101 | 3 | 0 | 98 | 0 |
-| Reference Monitor | 14 | 9 | 4 | 5 | 0 |
-| Source | 25 | 3 | 0 | 22 | 4 |
-| Status bar | 2 | 0 | 0 | 2 | 0 |
-| Text | 27 | 8 | 3 | 19 | 6 |
-| Timecode | 8 | 5 | 3 | 3 | 0 |
-| Timeline | 69 | 39 | 16 | 30 | 16 |
-| Tools | 15 | 15 | 0 | 0 | 14 |
+| Info | 6 | 6 | 1 | 0 | 0 |
+| Libraries | 6 | 6 | 1 | 0 | 0 |
+| Lumetri Color | 154 | 65 | 24 | 89 | 14 |
+| Lumetri Scopes | 56 | 56 | 7 | 0 | 0 |
+| Markers | 14 | 14 | 1 | 0 | 7 |
+| Media Browser | 100 | 100 | 16 | 0 | 69 |
+| Menu bar | 372 | 370 | 34 | 2 | 372 |
+| Menu bar (Windows, Linux, web) | 416 | 413 | 0 | 3 | 372 |
+| Metadata | 49 | 49 | 18 | 0 | 6 |
+| Program | 164 | 164 | 34 | 0 | 75 |
+| Progress | 7 | 7 | 2 | 0 | 0 |
+| Project | 154 | 154 | 19 | 0 | 102 |
+| Properties | 142 | 125 | 22 | 17 | 52 |
+| Reference Monitor | 15 | 15 | 5 | 0 | 0 |
+| Source | 84 | 66 | 6 | 18 | 18 |
+| Status bar | 3 | 3 | 3 | 0 | 0 |
+| Text | 65 | 65 | 16 | 0 | 29 |
+| Timecode | 22 | 22 | 3 | 0 | 0 |
+| Timeline | 121 | 121 | 23 | 0 | 74 |
+| Tools | 39 | 39 | 10 | 0 | 27 |
 
 **Dead**: the click did nothing the crawl could observe (no command, no UI state, no new elements, no playback or selection change). Some are fine: a tab or option that is already selected, a read-out, an empty area, a control that needs a drag rather than a click. Others are worth a look.
 
@@ -62,72 +64,140 @@ Last crawl: 749 jobs; 3842 entries (3441 elements, 372 menu commands); 42 dialog
 
 ## Dialogs reached
 
+- 23.976 frames/second
 - AAF
 - About FilmCraft
 - Add Flash Cue Marker
 - Add Guide
 - Add Tracks
-- Appearance
-- Audio
-- Audio Hardware
-- Auto Save
-- Color
+- Audio Channels
+- Audio Codec
+- Audio Gain
+- Audio In Point
+- Audio Info
+- Audio Out Point
+- Automate to Sequence
 - Color Management
 - Color Matte
+- Commands
+- Consolidate and Transcode
+- Contributors
+- Create Multi-Camera Source Sequence
+- Date Modified
 - Delete Tracks
+- Edit
+- Edit Columns
 - Edit Workspaces
+- Field Options
 - Find
+- Frame Hold Options
 - General
-- Graphics
 - Ingest Settings
+- Interpret Footage
 - Keyboard Shortcuts
-- Labels
+- Label
+- Make Subclip
 - Manage Guides
-- Media
-- Media Analysis & Transcription
-- Media Cache
-- Memory
+- Media Type
+- Merge Clips
+- Metadata Display
+- Motion Graphics Template
+- Nest
 - Normalize Mix Track
 - OMF
 - Offline File
-- Playback
-- Plugins
 - Project Manager
 - Record (voice-over on the record-enabled track)
+- Remove Attributes
 - Replace Fonts in Projects
+- Save As
+- Save As New View Preset
+- Save Preset
 - Save as New Workspace
 - Save as Template
+- Scene Edit Detection
 - Scratch Disks
 - Search Bin
+- Selection
 - Sequence Settings
+- Settings
 - Simplify Sequence
+- Sort: First commit
+- Source Settings
+- Speed/Duration
+- Synchronize
 - System Compatibility Report
-- Timeline
-- Trim
+- Table
+- Text Properties
+- Timecode
+- VR Properties
+- Video Codec
+- Voice-Over Record Settings
 
 ## Dead elements
 
 - **Audio Clip Mixer**: `clipMixer.{track}.fader`, `clipMixer.{track}.keyframe`, `clipMixer.{track}.pan`, `clipMixer.{track}.value`, `panel.AudioClipMixer`
-- **Audio Track Mixer**: `mixer.Mix.fader`, `mixer.Mix.meter`, `mixer.Mix.name`, `mixer.transport.playback.loop`, `mixer.{track}.fader`, `mixer.{track}.meter`, `mixer.{track}.name`, `mixer.{track}.pan`, `panel.AudioTrackMixer`, `panel.tab.AudioTrackMixer`
-- **Dock**: `dock.gutter.`, `dock.gutter.a`, `dock.gutter.aa`, `dock.gutter.b`, `dock.gutter.bb`, `dock.gutter.bbb`
-- **Effect Controls**: `panel.EffectControls`
-- **Effects**: `effects.item.additive_dissolve`, `effects.item.blur_dissolve`, `effects.item.burn_alpha`, `effects.item.cross_dissolve`, `effects.item.dip_to_black`, `effects.item.dip_to_color`, `effects.item.dip_to_white`, `effects.item.film_dissolve`, `effects.item.luma_fade`, `effects.item.morph_cut`, `panel.Effects`
-- **Essential Graphics**: `gfxTemplates.apply`, `gfxTemplates.install`, `gfxTemplates.remove`
-- **Essential Sound**: `essentialSound.tab.Edit`, `panel.EssentialSound`, `panel.tab.EssentialSound`
+- **Audio Meters**: `audioMeters`, `audioMeters.channel.L`, `audioMeters.channel.R`, `audioMeters.loudness`, `panel.AudioMeters`
+- **Audio Track Mixer**: `mixer.Mix.fader`, `mixer.Mix.fx.1`, `mixer.Mix.fx.2`, `mixer.Mix.fx.3`, `mixer.Mix.fx.4`, `mixer.Mix.meter`, `mixer.Mix.name`, `mixer.S1.fader`, `mixer.S1.fx.1`, `mixer.S1.fx.2`, `mixer.S1.fx.3`, `mixer.S1.fx.4`, `mixer.S1.meter`, `mixer.S1.name`, `mixer.S1.pan`, `mixer.S1.send.0`, `mixer.S1.send.1`, `mixer.S1.send.2`, `mixer.S1.send.3`, `mixer.S1.send.4`, `mixer.S2.fader`, `mixer.S2.fx.1`, `mixer.S2.fx.2`, `mixer.S2.fx.3`, `mixer.S2.fx.4`, `mixer.S2.meter`, `mixer.S2.name`, `mixer.S2.pan`, `mixer.S2.send.0`, `mixer.S2.send.1`, `mixer.S2.send.2`, `mixer.S2.send.3`, `mixer.S2.send.4`, `mixer.showHide.all`, `mixer.transport.playback.loop`, `mixer.{track}.fader`, `mixer.{track}.fx.2`, `mixer.{track}.fx.3`, `mixer.{track}.fx.4`, `mixer.{track}.meter`, `mixer.{track}.name`, `mixer.{track}.pan`, `mixer.{track}.send.2`, `mixer.{track}.send.3`, `mixer.{track}.send.4`, `panel.AudioTrackMixer`, `panel.tab.AudioTrackMixer`
+- **Dialog: AAF**: `aafExport.audio.embedded`, `aafExport.audio.linked`, `aafExport.audio.separate`, `aafExport.audioFormat.aiff`, `aafExport.audioFormat.mxf`, `aafExport.audioFormat.wav`, `aafExport.bitDepth.16`, `aafExport.bitDepth.24`, `aafExport.breakoutToMono`, `aafExport.handles`, `aafExport.mixdownVideo`, `aafExport.renderAudioEffects`, `aafExport.sampleRate.32000`, `aafExport.sampleRate.44100`, `aafExport.sampleRate.48000`, `aafExport.sampleRate.96000`, `aafExport.trimAudio`
+- **Dialog: About FilmCraft**: `about.appPage`, `about.discord`, `about.github`, `about.reportIssue`, `about.tab.about`, `about.website`
+- **Dialog: Add Guide**: `guides.add.vertical`
+- **Dialog: Add Tracks**: `addTracks.submix.placement`
+- **Dialog: Audio Gain**: `audioGain.adjust`, `audioGain.normalizeAll.value`, `audioGain.normalizeMax.value`, `audioGain.peak`, `audioGain.set.value`
+- **Dialog: Automate to Sequence**: `automate.method.insert`, `automate.ordering.sort`, `automate.placement.sequentially`
+- **Dialog: Color Management**: `colorDialog.working.rec709`
+- **Dialog: Color Matte**: `colorMatte.color`
+- **Dialog: Consolidate and Transcode**: `pm.preset.prores_lt`
+- **Dialog: Contributors**: `about.credits.contributor.EthanSuquet`, `about.credits.contributor.HEOJUNFO`, `about.credits.contributor.Luna161`, `about.credits.contributor.Luskish`, `about.credits.contributor.RicSchonfelder`, `about.credits.contributor.SaymonMaster14`, `about.credits.contributor.ajsongpilot`, `about.credits.contributor.carlitosteso3`, `about.credits.contributor.coygeek`, `about.credits.contributor.dcarnelutti`, `about.credits.contributor.echelon`, `about.credits.contributor.justjohn12345`, `about.credits.contributor.midasdf`, `about.credits.contributor.mweinbach`, `about.credits.contributor.punkhop`, `about.credits.contributor.storybored379`, `about.credits.grabBag`, `about.credits.names.displayName`, `about.credits.names.realName`, `about.credits.names.username`, `about.credits.reverse`
+- **Dialog: Create Multi-Camera Source Sequence**: `mcam.audio.camera1`, `mcam.cameraNames.clip`, `mcam.ignoreHours`, `mcam.marker`, `mcam.method.audio`
+- **Dialog: Delete Tracks**: `deleteTracks.audio.target`, `deleteTracks.ok`, `deleteTracks.video.target`
+- **Dialog: Edit**: `fxEditor.parametric_eq.node.b1`, `fxEditor.parametric_eq.node.b2`, `fxEditor.parametric_eq.node.b4`, `fxEditor.parametric_eq.node.b5`, `fxEditor.parametric_eq.node.high`, `fxEditor.parametric_eq.node.hp`, `fxEditor.parametric_eq.node.low`, `fxEditor.parametric_eq.node.lp`, `fxEditor.parametric_eq.node.mid`, `fxEditor.parametric_eq.plot`
+- **Dialog: Edit Columns**: `mediaBrowser.columns.Frame Rate.up`, `mediaBrowser.columns.Name`, `mediaBrowser.columns.Size.down`
+- **Dialog: Edit Workspaces**: `workspaces.edit.delete`, `workspaces.edit.name`, `workspaces.edit.rename`
+- **Dialog: Field Options**: `fieldOptions.processing.none`
+- **Dialog: Find**: `find.in.all`, `find.match.all`, `find.scope.timeline`
+- **Dialog: Frame Hold Options**: `frameHold.holdFilters`, `frameHold.holdOn.in`, `frameHold.holdOn.out`, `frameHold.holdOn.playhead`, `frameHold.holdOn.sequenceTime`, `frameHold.holdOn.sourceTimecode`
+- **Dialog: General**: `projectSettings.tab.general`
+- **Dialog: Interpret Footage**: `colorDialog.space.auto`, `colorDialog.space.logc3-awg3`
+- **Dialog: Keyboard Shortcuts**: `shortcuts.add.file.newAdjustmentLayer`, `shortcuts.add.file.newBarsAndTone`, `shortcuts.add.file.newBin`, `shortcuts.add.file.newBinFromSelection`, `shortcuts.add.file.newCountingLeader`, `shortcuts.add.file.newOfflineFile`, `shortcuts.add.file.newProject`, `shortcuts.add.file.newSearchBin`, `shortcuts.add.file.newSequence`, `shortcuts.add.file.newSequenceFromClip`, `shortcuts.add.file.newTransparentVideo`, `shortcuts.add.file.openDemoProject`, `shortcuts.cell.file.newAdjustmentLayer`, `shortcuts.cell.file.newBarsAndTone`, `shortcuts.cell.file.newBin`, `shortcuts.cell.file.newBinFromSelection`, `shortcuts.cell.file.newCountingLeader`, `shortcuts.cell.file.newOfflineFile`, `shortcuts.cell.file.newProject`, `shortcuts.cell.file.newSearchBin`, `shortcuts.cell.file.newSequence`, `shortcuts.cell.file.newSequenceFromClip`, `shortcuts.cell.file.newTransparentVideo`, `shortcuts.cell.file.openDemoProject`, `shortcuts.clear`, `shortcuts.conflict`, `shortcuts.delete`, `shortcuts.export`, `shortcuts.import`, `shortcuts.key.'`, `shortcuts.key.,`, `shortcuts.key.-`, `shortcuts.key..`, `shortcuts.key./`, `shortcuts.key.0`, `shortcuts.key.1`, `shortcuts.key.2`, `shortcuts.key.3`, `shortcuts.key.4`, `shortcuts.key.5`, `shortcuts.key.6`, `shortcuts.key.7`, `shortcuts.key.8`, `shortcuts.key.9`, `shortcuts.key.;`, `shortcuts.key.=`, `shortcuts.key.A`, `shortcuts.key.B`, `shortcuts.key.Backspace`, `shortcuts.key.C`, `shortcuts.key.CapsLock`, `shortcuts.key.D`, `shortcuts.key.Delete`, `shortcuts.key.Down`, `shortcuts.key.E`, `shortcuts.key.End`, `shortcuts.key.Enter`, `shortcuts.key.Escape`, `shortcuts.key.F`, `shortcuts.key.F1`, `shortcuts.key.F10`, `shortcuts.key.F11`, `shortcuts.key.F12`, `shortcuts.key.F2`, `shortcuts.key.F3`, `shortcuts.key.F4`, `shortcuts.key.F5`, `shortcuts.key.F6`, `shortcuts.key.F7`, `shortcuts.key.F8`, `shortcuts.key.F9`, `shortcuts.key.G`, `shortcuts.key.H`, `shortcuts.key.Home`, `shortcuts.key.I`, `shortcuts.key.Insert`, `shortcuts.key.J`, `shortcuts.key.K`, `shortcuts.key.L`, `shortcuts.key.Left`, `shortcuts.key.M`, `shortcuts.key.N`, `shortcuts.key.O`, `shortcuts.key.P`, `shortcuts.key.PageDown`, `shortcuts.key.PageUp`, `shortcuts.key.Q`, `shortcuts.key.R`, `shortcuts.key.Right`, `shortcuts.key.S`, `shortcuts.key.Space`, `shortcuts.key.T`, `shortcuts.key.Tab`, `shortcuts.key.U`, `shortcuts.key.Up`, `shortcuts.key.V`, `shortcuts.key.W`, `shortcuts.key.X`, `shortcuts.key.Y`, `shortcuts.key.Z`, `shortcuts.key.[`, `shortcuts.key.\`, `shortcuts.key.]`, `shortcuts.key.``, `shortcuts.message`, `shortcuts.mod.Alt`, `shortcuts.mod.Alt.right`, `shortcuts.mod.Cmd`, `shortcuts.mod.Cmd.right`, `shortcuts.mod.Ctrl`, `shortcuts.mod.Ctrl.right`, `shortcuts.mod.Shift`, `shortcuts.mod.Shift.right`, `shortcuts.redo`, `shortcuts.row.file.newAdjustmentLayer`, `shortcuts.row.file.newBarsAndTone`, `shortcuts.row.file.newBin`, `shortcuts.row.file.newBinFromSelection`, `shortcuts.row.file.newCountingLeader`, `shortcuts.row.file.newOfflineFile`, `shortcuts.row.file.newProject`, `shortcuts.row.file.newSearchBin`, `shortcuts.row.file.newSequence`, `shortcuts.row.file.newSequenceFromClip`, `shortcuts.row.file.newTransparentVideo`, `shortcuts.row.file.openDemoProject`, `shortcuts.undo`
+- **Dialog: Manage Guides**: `guides.manage.apply`, `guides.manage.delete`
+- **Dialog: Merge Clips**: `merge.ignoreHours`, `merge.marker`, `merge.method.audio`
+- **Dialog: Metadata Display**: `projectDialog.addProperty`, `projectDialog.down.Description`, `projectDialog.down.Name`, `projectDialog.field.Audio Duration`, `projectDialog.field.Name`, `projectDialog.field.Subclip Start`, `projectDialog.up.Frame Rate`, `projectDialog.up.Name`
+- **Dialog: Nest**: `nest.name`
+- **Dialog: OMF**: `omfExport.audio.embedded`, `omfExport.audio.separate`, `omfExport.audioFormat.aiff`, `omfExport.audioFormat.wav`, `omfExport.bitDepth.16`, `omfExport.bitDepth.24`, `omfExport.breakoutToMono`, `omfExport.renderAudioEffects`, `omfExport.sampleRate.32000`, `omfExport.sampleRate.44100`, `omfExport.sampleRate.48000`, `omfExport.sampleRate.96000`, `omfExport.trimAudio`
+- **Dialog: Project Manager**: `pm.browse`, `pm.handles`, `pm.mode.collect`, `pm.ok`, `pm.sizes`
+- **Dialog: Replace Fonts in Projects**: `replaceFonts.from`
+- **Dialog: Save Preset**: `savePreset.keyframes.scale`
+- **Dialog: Scratch Disks**: `projectSettings.scratch.audioPreviews.browse`, `projectSettings.scratch.audioPreviews.same`, `projectSettings.scratch.autoSave.browse`, `projectSettings.scratch.autoSave.same`, `projectSettings.scratch.captured.browse`, `projectSettings.scratch.captured.same`, `projectSettings.scratch.videoPreviews.browse`, `projectSettings.scratch.videoPreviews.same`
+- **Dialog: Sequence Settings**: `sequenceSettings.aspect`, `sequenceSettings.audioDisplay`, `sequenceSettings.channels`, `sequenceSettings.editingMode`, `sequenceSettings.fields`, `sequenceSettings.par`, `sequenceSettings.previewCodec`, `sequenceSettings.previewFormat`, `sequenceSettings.previewHeight`, `sequenceSettings.previewWidth`, `sequenceSettings.tab.general`
+- **Dialog: Settings**: `settings.appearance.highlightColor`, `settings.audio.minimumTimeMs`, `settings.category.appearance`, `settings.graphics.captionFont`, `settings.graphics.captionMonospaceOnly`, `settings.help`, `settings.labels.colors.blue.color`, `settings.labels.colors.brown.color`, `settings.labels.colors.caribbean.color`, `settings.labels.colors.cerulean.color`, `settings.labels.colors.forest.color`, `settings.labels.colors.green.color`, `settings.labels.colors.iris.color`, `settings.labels.colors.lavender.color`, `settings.labels.colors.magenta.color`, `settings.labels.colors.mango.color`, `settings.labels.colors.purple.color`, `settings.labels.colors.rose.color`, `settings.labels.colors.tan.color`, `settings.labels.colors.teal.color`, `settings.labels.colors.violet.color`, `settings.labels.colors.yellow.color`, `settings.media.hardwareDecoding`, `settings.media.proresHardwareEncoding`, `settings.mediaAnalysis.autoTranscribeScope`, `settings.mediaCache.databaseLocation.browse`, `settings.mediaCache.location.browse`, `settings.reset`, `settings.timeline.matchFrameSetsIn`, `settings.timeline.restoreOpenSequences`, `settings.trim.rippleAddsEdits`, `settings.window`
+- **Dialog: Simplify Sequence**: `simplify.keep.both`
+- **Dialog: Speed/Duration**: `speedDuration.interpolation.frameSampling`
+- **Dialog: Synchronize**: `sync.ignoreHours`, `sync.marker`, `sync.method.audio`
+- **Dialog: VR Properties**: `sequenceSettings.vr.horizontal`, `sequenceSettings.vr.layout`, `sequenceSettings.vr.projection`, `sequenceSettings.vr.vertical`
+- **Dialog: Voice-Over Record Settings**: `voiceover.countdown`
+- **Dock**: `dock.gutter.`, `dock.gutter.a`, `dock.gutter.aa`, `dock.gutter.ab`, `dock.gutter.abb`, `dock.gutter.abbb`, `dock.gutter.b`, `dock.gutter.bb`, `dock.gutter.bbb`
+- **Effect Controls**: `effectControls.channel_volume.left.nextKeyframe`, `effectControls.channel_volume.left.prevKeyframe`, `effectControls.channel_volume.right.nextKeyframe`, `effectControls.channel_volume.right.prevKeyframe`, `effectControls.gaussian_blur.blurriness.nextKeyframe`, `effectControls.gaussian_blur.blurriness.prevKeyframe`, `effectControls.gaussian_blur.mask0.expansion.nextKeyframe`, `effectControls.gaussian_blur.mask0.expansion.prevKeyframe`, `effectControls.gaussian_blur.mask0.feather.stopwatch`, `effectControls.gaussian_blur.mask0.feather.value`, `effectControls.gaussian_blur.mask0.opacity.nextKeyframe`, `effectControls.gaussian_blur.mask0.opacity.prevKeyframe`, `effectControls.gaussian_blur.mask0.path.nextKeyframe`, `effectControls.gaussian_blur.mask0.path.prevKeyframe`, `effectControls.graphic_text.baseline_shift.nextKeyframe`, `effectControls.graphic_text.baseline_shift.prevKeyframe`, `effectControls.graphic_text.box_height.nextKeyframe`, `effectControls.graphic_text.box_height.prevKeyframe`, `effectControls.graphic_text.box_width.nextKeyframe`, `effectControls.graphic_text.box_width.prevKeyframe`, `effectControls.graphic_text.fill_color.nextKeyframe`, `effectControls.graphic_text.fill_color.prevKeyframe`, `effectControls.graphic_text.fill_color.value`, `effectControls.graphic_text.leading.nextKeyframe`, `effectControls.graphic_text.leading.prevKeyframe`, `effectControls.graphic_text.size.nextKeyframe`, `effectControls.graphic_text.size.prevKeyframe`, `effectControls.graphic_text.stroke2_color.stopwatch`, `effectControls.graphic_text.stroke2_color.value`, `effectControls.graphic_text.stroke_color.nextKeyframe`, `effectControls.graphic_text.stroke_color.prevKeyframe`, `effectControls.graphic_text.stroke_color.value`, `effectControls.graphic_text.stroke_width.graph.keyframe.{keyframe}`, `effectControls.graphic_text.stroke_width.nextKeyframe`, `effectControls.graphic_text.stroke_width.prevKeyframe`, `effectControls.graphic_text.text.nextKeyframe`, `effectControls.graphic_text.text.prevKeyframe`, `effectControls.graphic_text.tracking.stopwatch`, `effectControls.graphic_text.tracking.value`, `effectControls.lane`, `effectControls.motion.anchor.nextKeyframe`, `effectControls.motion.anchor.prevKeyframe`, `effectControls.motion.anti_flicker.nextKeyframe`, `effectControls.motion.anti_flicker.prevKeyframe`, `effectControls.motion.position.nextKeyframe`, `effectControls.motion.position.prevKeyframe`, `effectControls.motion.rotation.nextKeyframe`, `effectControls.motion.rotation.prevKeyframe`, `effectControls.motion.scale.nextKeyframe`, `effectControls.motion.scale.prevKeyframe`, `effectControls.motion.scale_width.nextKeyframe`, `effectControls.motion.scale_width.prevKeyframe`, `effectControls.opacity.mask0.expansion.nextKeyframe`, `effectControls.opacity.mask0.expansion.prevKeyframe`, `effectControls.opacity.mask0.feather.nextKeyframe`, `effectControls.opacity.mask0.feather.prevKeyframe`, `effectControls.opacity.mask0.opacity.nextKeyframe`, `effectControls.opacity.mask0.opacity.prevKeyframe`, `effectControls.opacity.mask0.path.nextKeyframe`, `effectControls.opacity.mask0.path.prevKeyframe`, `effectControls.opacity.opacity.nextKeyframe`, `effectControls.opacity.opacity.prevKeyframe`, `effectControls.panner.balance.nextKeyframe`, `effectControls.panner.balance.prevKeyframe`, `effectControls.parametric_eq.b1_freq.nextKeyframe`, `effectControls.parametric_eq.b1_freq.prevKeyframe`, `effectControls.parametric_eq.b1_gain.stopwatch`, `effectControls.parametric_eq.b1_gain.value`, `effectControls.parametric_eq.b1_q.nextKeyframe`, `effectControls.parametric_eq.b1_q.prevKeyframe`, `effectControls.parametric_eq.b2_freq.nextKeyframe`, `effectControls.parametric_eq.b2_freq.prevKeyframe`, `effectControls.parametric_eq.b2_gain.nextKeyframe`, `effectControls.parametric_eq.b2_gain.prevKeyframe`, `effectControls.parametric_eq.b2_q.nextKeyframe`, `effectControls.parametric_eq.b2_q.prevKeyframe`, `effectControls.parametric_eq.b4_freq.nextKeyframe`, `effectControls.parametric_eq.b4_freq.prevKeyframe`, `effectControls.parametric_eq.b4_gain.nextKeyframe`, `effectControls.parametric_eq.b4_gain.prevKeyframe`, `effectControls.parametric_eq.b4_q.nextKeyframe`, `effectControls.parametric_eq.b4_q.prevKeyframe`, `effectControls.parametric_eq.b5_freq.nextKeyframe`, `effectControls.parametric_eq.b5_freq.prevKeyframe`, `effectControls.parametric_eq.b5_gain.graph.keyframe.{keyframe}`, `effectControls.parametric_eq.b5_gain.nextKeyframe`, `effectControls.parametric_eq.b5_gain.prevKeyframe`, `effectControls.parametric_eq.b5_q.nextKeyframe`, `effectControls.parametric_eq.b5_q.prevKeyframe`, `effectControls.parametric_eq.high_freq.stopwatch`, `effectControls.parametric_eq.high_freq.value`, `effectControls.parametric_eq.hp_freq.nextKeyframe`, `effectControls.parametric_eq.hp_freq.prevKeyframe`, `effectControls.parametric_eq.low_freq.nextKeyframe`, `effectControls.parametric_eq.low_freq.prevKeyframe`, `effectControls.parametric_eq.low_gain.nextKeyframe`, `effectControls.parametric_eq.low_gain.prevKeyframe`, `effectControls.parametric_eq.low_q.nextKeyframe`, `effectControls.parametric_eq.low_q.prevKeyframe`, `effectControls.parametric_eq.master_gain.nextKeyframe`, `effectControls.parametric_eq.master_gain.prevKeyframe`, `effectControls.parametric_eq.mid_freq.nextKeyframe`, `effectControls.parametric_eq.mid_freq.prevKeyframe`, `effectControls.parametric_eq.mid_gain.nextKeyframe`, `effectControls.parametric_eq.mid_gain.prevKeyframe`, `effectControls.parametric_eq.mid_q.nextKeyframe`, `effectControls.parametric_eq.mid_q.prevKeyframe`, `effectControls.playhead`, `effectControls.time_remap.speed.nextKeyframe`, `effectControls.time_remap.speed.prevKeyframe`, `effectControls.volume.level.nextKeyframe`, `effectControls.volume.level.prevKeyframe`, `panel.EffectControls`
+- **Effects**: `effects.item.additive_dissolve`, `effects.item.additive_dissolve_legacy`, `effects.item.alpha_adjust`, `effects.item.alpha_glow`, `effects.item.amplify`, `effects.item.analog_delay`, `effects.item.asc_cdl`, `effects.item.balance_a`, `effects.item.bandpass`, `effects.item.barn_doors`, `effects.item.basic_3d`, `effects.item.bass`, `effects.item.binauralizer`, `effects.item.black_white`, `effects.item.block_dissolve`, `effects.item.block_motion`, `effects.item.blur_dissolve`, `effects.item.bokeh_blur`, `effects.item.brightness_contrast`, `effects.item.brush_strokes`, `effects.item.burn_alpha`, `effects.item.burn_chroma`, `effects.item.camera_blur`, `effects.item.center_split`, `effects.item.channel_blur`, `effects.item.channel_mix`, `effects.item.channel_mixer_a`, `effects.item.channel_volume_a`, `effects.item.chaos`, `effects.item.chorus_flanger`, `effects.item.chroma_leak`, `effects.item.clock_wipe`, `effects.item.clock_wipe_legacy`, `effects.item.color_key`, `effects.item.color_pass`, `effects.item.color_replace`, `effects.item.compound_blur`, `effects.item.constant_gain`, `effects.item.constant_power`, `effects.item.convolution_reverb`, `effects.item.corner_pin`, `effects.item.crop`, `effects.item.cross_dissolve`, `effects.item.cross_dissolve_legacy`, `effects.item.cross_zoom`, `effects.item.cross_zoom_legacy`, `effects.item.declicker`, `effects.item.deesser`, `effects.item.dehummer`, `effects.item.delay`, `effects.item.denoise`, `effects.item.dereverb`, `effects.item.dip_to_black`, `effects.item.dip_to_black_legacy`, `effects.item.dip_to_color`, `effects.item.dip_to_white`, `effects.item.dip_to_white_legacy`, `effects.item.directional_blur`, `effects.item.directional_blur_legacy`, `effects.item.directional_blur_transition`, `effects.item.distortion`, `effects.item.drop_shadow`, `effects.item.dynamics`, `effects.item.dynamics_rack`, `effects.item.earthquake`, `effects.item.echo_glow`, `effects.item.edge_feather`, `effects.item.edge_glow`, `effects.item.exponential_fade`, `effects.item.extract`, `effects.item.fft_filter`, `effects.item.fill_left`, `effects.item.fill_right`, `effects.item.film_dissolve`, `effects.item.film_dissolve_legacy`, `effects.item.film_roll`, `effects.item.flanger`, `effects.item.flare`, `effects.item.flash`, `effects.item.flicker`, `effects.item.flip_motion`, `effects.item.focus_blur`, `effects.item.fold_motion`, `effects.item.four_color_gradient`, `effects.item.frame`, `effects.item.gamma_correction`, `effects.item.gaussian_blur`, `effects.item.gaussian_blur_legacy`, `effects.item.glass`, `effects.item.glint`, `effects.item.glitch`, `effects.item.glow`, `effects.item.gradient`, `effects.item.gradient_wipe_legacy`, `effects.item.graphic_eq`, `effects.item.graphic_eq_20`, `effects.item.graphic_eq_30`, `effects.item.grunge`, `effects.item.guitar_suite`, `effects.item.hard_limiter`, `effects.item.highpass`, `effects.item.inset`, `effects.item.invert`, `effects.item.invert_a`, `effects.item.iris_box`, `effects.item.iris_cross`, `effects.item.iris_diamond`, `effects.item.iris_round`, `effects.item.kaleidoscope`, `effects.item.lens_blur`, `effects.item.lens_distortion`, `effects.item.lens_flare`, `effects.item.levels`, `effects.item.light_leak`, `effects.item.light_sweep`, `effects.item.lighting_effects`, `effects.item.linear_wipe`, `effects.item.linear_wipe_legacy`, `effects.item.liquid_distortion`, `effects.item.logo_cutout`, `effects.item.loudness_radar`, `effects.item.louver`, `effects.item.lowpass`, `effects.item.luma_fade`, `effects.item.luma_key`, `effects.item.lumetri`, `effects.item.magnify`, `effects.item.magnify_legacy`, `effects.item.mastering`, `effects.item.mirror`, `effects.item.mirror_transition`, `effects.item.morph_cut`, `effects.item.mosaic_legacy`, `effects.item.mosaic_transition`, `effects.item.motion_camera`, `effects.item.motion_tween`, `effects.item.multiband_compressor`, `effects.item.multitap_delay`, `effects.item.mute`, `effects.item.neon_wipe`, `effects.item.noise`, `effects.item.noise_legacy`, `effects.item.non_additive_dissolve`, `effects.item.notch`, `effects.item.page_peel`, `effects.item.panel_wipe`, `effects.item.parametric_eq`, `effects.item.phaser`, `effects.item.phosphor`, `effects.item.pitch_shifter`, `effects.item.plateau_wipe`, `effects.item.pop_motion`, `effects.item.proc_amp`, `effects.item.pull_motion`, `effects.item.push`, `effects.item.radial_blur`, `effects.item.radial_wipe`, `effects.item.ramp`, `effects.item.ray`, `effects.item.reduce_interlace_flicker`, `effects.item.replicate`, `effects.item.roll`, `effects.item.roll_3d`, `effects.item.rounded_crop`, `effects.item.scientific_filter`, `effects.item.shape_dissolve`, `effects.item.shape_flow`, `effects.item.sharpen`, `effects.item.simple_notch`, `effects.item.single_band_compressor`, `effects.item.slice`, `effects.item.slide`, `effects.item.soft_wipe`, `effects.item.solarize`, `effects.item.speech_enhance`, `effects.item.spherize`, `effects.item.spin_3d`, `effects.item.spin_motion`, `effects.item.spinback_3d`, `effects.item.split`, `effects.item.spring_motion`, `effects.item.star_wipe`, `effects.item.stereo_expander`, `effects.item.stereo_width`, `effects.item.stretch`, `effects.item.stretch_wipe`, `effects.item.stripe`, `effects.item.studio_reverb`, `effects.item.surround_reverb`, `effects.item.text_animator`, `effects.item.tint`, `effects.item.track_matte`, `effects.item.travel_motion`, `effects.item.tube_compressor`, `effects.item.turbulent_displace`, `effects.item.tv_power`, `effects.item.twirl`, `effects.item.twirl_legacy`, `effects.item.typewriter`, `effects.item.unsharp_mask`, `effects.item.vhs_damage`, `effects.item.video_limiter`, `effects.item.vignette`, `effects.item.volume_a`, `effects.item.vr_blur`, `effects.item.vr_chroma_leaks`, `effects.item.vr_chromatic_aberrations`, `effects.item.vr_color_gradients`, `effects.item.vr_denoise`, `effects.item.vr_digital_glitch`, `effects.item.vr_fractal_noise`, `effects.item.vr_gradient_wipe`, `effects.item.vr_iris_wipe`, `effects.item.vr_light_leaks`, `effects.item.vr_light_rays`, `effects.item.vr_mobius_zoom`, `effects.item.vr_random_blocks`, `effects.item.vr_spherical_blur`, `effects.item.warp_stabilizer`, `effects.item.wave`, `effects.item.wave_warp`, `effects.item.whip`, `effects.item.zoom_blur`, `effects.lumetriPreset.Boost Vibrance`, `effects.lumetriPreset.Cold Mono`, `effects.lumetriPreset.Cross Processed`, `effects.lumetriPreset.Faded Print`, `effects.lumetriPreset.Golden Dusk`, `effects.lumetriPreset.Half Saturation`, `effects.lumetriPreset.Hard Mono`, `effects.lumetriPreset.Hard Sun`, `effects.lumetriPreset.Legal Range Squeeze`, `effects.lumetriPreset.Lift Shadows`, `effects.lumetriPreset.Neutral Mono`, `effects.lumetriPreset.Night Exterior`, `effects.lumetriPreset.Protect Highlights`, `effects.lumetriPreset.Sepia Tone`, `effects.lumetriPreset.Silver Retention`, `effects.lumetriPreset.Steel Blue`, `effects.lumetriPreset.Teal Shadows, Warm Skin`, `effects.lumetriPreset.Warm Negative`, `effects.preset.Blur In`, `effects.preset.Blur Out`, `effects.preset.Fade In`, `effects.preset.Fade Out`, `effects.preset.Mosaic In`, `effects.preset.PiP 35% Upper Right`, `effects.preset.Soft Vignette`, `effects.preset.Spotlight`, `effects.preset.Warm Tint`, `panel.Effects`
+- **Essential Graphics**: `gfxTemplates.apply`, `gfxTemplates.install`, `gfxTemplates.remove`, `graphics.prop.background_color`, `graphics.prop.fill_color`, `graphics.prop.shadow_color`, `graphics.prop.stroke2_color`, `graphics.prop.stroke_color`
+- **Essential Sound**: `essentialSound.browse.Dialogue.(Default)`, `essentialSound.browse.Dialogue.Balanced Voice`, `essentialSound.browse.Dialogue.Clean Up Noisy Dialogue`, `essentialSound.browse.Dialogue.Dry Up a Roomy Voice`, `essentialSound.browse.Dialogue.Phone Call`, `essentialSound.browse.Dialogue.Podcast Voice`, `essentialSound.browse.Dialogue.Radio Announcer`, `essentialSound.browse.Dialogue.Voice in a Hall`, `essentialSound.browse.Music.(Default)`, `essentialSound.browse.Music.Duck Deep Under Dialogue`, `essentialSound.browse.Music.Duck Under Dialogue`, `essentialSound.browse.Music.Duck Under Voice and Effects`, `essentialSound.browse.SFX.(Default)`, `essentialSound.browse.SFX.Far Away`, `essentialSound.browse.SFX.From the Left`, `essentialSound.browse.SFX.From the Right`, `essentialSound.browse.SFX.In a Room`, `essentialSound.creative.reverb.amount`, `essentialSound.creative.reverb.amount.track`, `essentialSound.creative.reverbPreset`, `essentialSound.creative.width.amount`, `essentialSound.creative.width.amount.track`, `essentialSound.ducking.against.Ambience`, `essentialSound.ducking.against.Music`, `essentialSound.ducking.against.SFX`, `essentialSound.ducking.against.Untagged`, `essentialSound.ducking.fadeS`, `essentialSound.ducking.fadeS.track`, `essentialSound.ducking.reduceDb`, `essentialSound.ducking.reduceDb.track`, `essentialSound.ducking.sensitivity`, `essentialSound.ducking.sensitivity.track`, `essentialSound.generateDucking`, `essentialSound.pan.value`, `essentialSound.pan.value.track`, `essentialSound.preset.delete`, `essentialSound.preset.ok`, `essentialSound.repair.deess.amount`, `essentialSound.repair.deess.amount.track`, `essentialSound.repair.dehum.amount`, `essentialSound.repair.dehum.amount.track`, `essentialSound.repair.humHz.0`, `essentialSound.repair.humHz.1`, `essentialSound.repair.noise.amount`, `essentialSound.repair.noise.amount.track`, `essentialSound.repair.reverb.amount`, `essentialSound.repair.reverb.amount.track`, `essentialSound.repair.rumble.amount`, `essentialSound.repair.rumble.amount.track`, `essentialSound.tab.Edit`, `essentialSound.volume.levelDb`, `essentialSound.volume.levelDb.track`, `panel.EssentialSound`, `panel.tab.EssentialSound`
 - **Events**: `panel.Events`, `panel.tab.Events`
-- **Export mode**: `export.destination.mediaFile`, `export.estimate`, `export.location.browse`, `export.preview`, `export.queue.clear`, `export.queue.start`, `export.queue.stop`, `export.summary`
-- **Header**: `header.discord`, `header.drag`, `header.fullscreen`, `header.mode.edit`
-- **History**: `history.row.open`, `panel.History`
+- **Export mode**: `export.destination.mediaFile`, `export.effects.imageOverlay.browse`, `export.estimate`, `export.location.browse`, `export.preview`, `export.queue.clear`, `export.queue.item.{item}`, `export.queue.item.{item}.down`, `export.queue.item.{item}.up`, `export.queue.start`, `export.queue.stop`, `export.summary`, `presetManager.delete`, `presetManager.favorite.APV 422-10`, `presetManager.favorite.APV 422-12`, `presetManager.favorite.Apple ProRes 422`, `presetManager.favorite.Apple ProRes 422 HQ`, `presetManager.favorite.Apple ProRes 422 Proxy`, `presetManager.favorite.Avid DNxHR HQ`, `presetManager.favorite.Avid DNxHR LB`, `presetManager.favorite.Avid DNxHR SQ`, `presetManager.favorite.MXF OP-Atom DNxHR (Avid)`, `presetManager.favorite.MXF OP1a DNxHR HQ`, `presetManager.favorite.MXF OP1a H.264`, `presetManager.favorite.MXF OP1a ProRes 422 HQ`, `presetManager.favorite.PNG Sequence`, `presetManager.favorite.TIFF Sequence`, `presetManager.item.APV 422-10`, `presetManager.item.APV 422-12`, `presetManager.item.Apple ProRes 422 HQ`, `presetManager.item.Apple ProRes 422 LT`, `presetManager.item.Apple ProRes 422 Proxy`, `presetManager.item.Avid DNxHR HQ`, `presetManager.item.Avid DNxHR LB`, `presetManager.item.Avid DNxHR SQ`, `presetManager.item.MXF OP-Atom DNxHR (Avid)`, `presetManager.item.MXF OP1a DNxHR HQ`, `presetManager.item.MXF OP1a H.264`, `presetManager.item.MXF OP1a ProRes 422 HQ`, `presetManager.item.Match Source – Adaptive High Bitrate`, `presetManager.item.PNG Sequence`, `presetManager.item.TIFF Sequence`, `presetManager.save`
+- **Floating window**: `projectBin.{projectBin}.breadcrumb`, `projectBin.{projectBin}.count`, `projectBin.{projectBin}.up`, `projectBin.{projectBin}.view.Icon`, `projectBin.{projectBin}.window`
+- **Header**: `header.discord`, `header.drag`, `header.fullscreen`, `header.mode.edit`, `quickExport.preset.Match Source – Adaptive High Bitrate`, `quickExport.preset.Social Vertical 1080×1920`
+- **History**: `history.row.open`, `history.row.{row}`, `panel.History`
 - **Import mode**: `import.link.appPage`, `import.link.discord`, `import.link.github`, `import.link.website`
 - **Info**: `panel.Info`
 - **Libraries**: `panel.Libraries`
-- **Lumetri Color**: `panel.LumetriColor`, `panel.tab.LumetriColor`
-- **Lumetri Scopes**: `panel.LumetriScopes`, `panel.tab.LumetriScopes`, `scopes.space`
+- **Lumetri Color**: `lumetri.curves.channel.luma`, `lumetri.param.blacks`, `lumetri.param.blacks.track`, `lumetri.param.contrast`, `lumetri.param.contrast.track`, `lumetri.param.exposure`, `lumetri.param.exposure.track`, `lumetri.param.faded_film`, `lumetri.param.highlights`, `lumetri.param.highlights.track`, `lumetri.param.look_intensity`, `lumetri.param.look_intensity.track`, `lumetri.param.saturation`, `lumetri.param.saturation.track`, `lumetri.param.shadows`, `lumetri.param.shadows.track`, `lumetri.param.temperature`, `lumetri.param.temperature.track`, `lumetri.param.tint`, `lumetri.param.tint.track`, `lumetri.param.whites`, `lumetri.param.whites.track`, `panel.LumetriColor`, `panel.tab.LumetriColor`
+- **Lumetri Scopes**: `panel.LumetriScopes`, `scopes.hdrWaveform`, `scopes.view.histogram`, `scopes.view.parade`, `scopes.view.vectorscopeHls`, `scopes.view.vectorscopeYuv`, `scopes.view.waveform`
 - **Markers**: `panel.Markers`
-- **Media Browser**: `mediaBrowser.back`, `mediaBrowser.count`, `mediaBrowser.forward`, `mediaBrowser.header.Frame Rate`, `mediaBrowser.header.Media Duration`, `mediaBrowser.header.Name`, `mediaBrowser.tree.favorites`, `mediaBrowser.tree.localDrives`, `mediaBrowser.tree.network`, `mediaBrowser.tree.recent`
+- **Media Browser**: `mediaBrowser.back`, `mediaBrowser.count`, `mediaBrowser.forward`, `mediaBrowser.header.Frame Rate`, `mediaBrowser.header.Media Duration`, `mediaBrowser.header.Name`, `mediaBrowser.header.Size`, `mediaBrowser.header.Video Info`, `mediaBrowser.menu.clearRecent`, `mediaBrowser.menu.import`, `mediaBrowser.menu.newPanel`, `mediaBrowser.menu.openInSource`, `mediaBrowser.tree.favorites`, `mediaBrowser.tree.localDrives`, `mediaBrowser.tree.network`, `mediaBrowser.tree.recent`
+- **Menu: Clip**: `clip.generateAudioWaveform`
+- **Menu: Clip ▸ Proxy**: `media.attachProxies`, `media.reconnectFullRes`
 - **Menu: Edit ▸ Language**: `app.language.english`
 - **Menu: File**: `file.import`, `file.importImageSequence`, `file.open`, `file.save`, `file.saveAll`, `file.saveAs`, `file.saveCopy`
-- **Menu: File ▸ Export**: `captions.export`, `file.exportAle`
+- **Menu: File ▸ Export**: `captions.export`, `file.exportAle`, `file.exportSelectionProject`
 - **Menu: File ▸ Get Media File Properties for**: `file.mediaPropertiesFile`
 - **Menu: Graphics and Titles ▸ New Layer**: `graphics.newFromFile`
 - **Menu: Help**: `help.filmcraftHelp`
@@ -136,11 +206,17 @@ Last crawl: 749 jobs; 3842 entries (3441 elements, 372 menu commands); 42 dialog
 - **Menu: View ▸ Magnification**: `view.magnification.fit`
 - **Menu: View ▸ Paused Resolution**: `view.pausedRes.full`
 - **Menu: View ▸ Playback Resolution**: `view.playbackRes.half`
-- **Menu: Window**: `window.panel.Timeline`
+- **Menu: Window**: `window.panel.AudioMeters`, `window.panel.Program`, `window.panel.Project`, `window.panel.Properties`, `window.panel.Source`, `window.panel.Timeline`, `window.panel.Tools`
 - **Menu: Window ▸ Workspaces**: `window.workspace.editing`, `window.workspace.reset`, `window.workspace.saveChanges`
-- **Metadata**: `metadata.empty`, `panel.Metadata`
+- **Metadata**: `metadata.empty`, `metadata.field.AudioCodec`, `metadata.field.AudioInfo`, `metadata.field.ColorSpace`, `metadata.field.FilePath`, `metadata.field.Format`, `metadata.field.FrameRate`, `metadata.field.MediaDuration`, `metadata.field.MediaEnd`, `metadata.field.MediaStart`, `metadata.field.MediaType`, `metadata.field.Status`, `metadata.field.VideoCodec`, `metadata.field.VideoInfo`, `metadata.header`, `metadata.section.Clip`, `metadata.section.File`, `panel.Metadata`
+- **Program**: `panel.Program`, `panel.tab.Program`, `program.buttonEditor.reset`, `program.compare.reference`, `program.compare.set`, `program.guide.{guide}`, `program.mask.body`, `program.mask.expansion`, `program.mask.feather`, `program.mask.in.0`, `program.mask.in.1`, `program.mask.in.2`, `program.mask.in.3`, `program.mask.out.0`, `program.mask.out.1`, `program.mask.out.2`, `program.mask.out.3`, `program.mask.vertex.0`, `program.mask.vertex.1`, `program.mask.vertex.2`, `program.mask.vertex.3`, `program.multicam.grid`, `program.picture`, `program.ruler.left`, `program.ruler.top`, `program.timecode`, `program.transport.media.toggleProxies`, `trimMonitor.inShift`, `trimMonitor.inTimecode`, `trimMonitor.incoming`, `trimMonitor.outShift`, `trimMonitor.outTimecode`, `trimMonitor.outgoing`, `trimMonitor.roll`
 - **Progress**: `panel.Progress`, `panel.tab.Progress`
-- **Reference Monitor**: `panel.ReferenceMonitor`, `panel.tab.ReferenceMonitor`, `reference.stepBack`, `reference.timecode`
-- **Text**: `panel.Text`, `text.captions.import`, `text.tab.Captions`
+- **Project**: `panel.tab.Project`, `project.breadcrumb`, `project.count`, `project.menu.automateToSequence`, `project.menu.closeAllOtherProjects`, `project.menu.delete`, `project.menu.freeformOptions`, `project.menu.manageViewPresets`, `project.menu.newBinFromSelection`, `project.menu.newProjectShortcut`, `project.menu.refreshProject`, `project.menu.rename`, `project.menu.restoreViewPreset`, `project.menu.revealProject`, `project.menu.saveViewPreset`, `project.previewArea`, `project.rename`, `project.tab.{tab}`, `project.up`
+- **Properties**: `panel.Properties`, `panel.tab.Properties`, `properties.crop.bottom.nextKeyframe`, `properties.crop.bottom.prevKeyframe`, `properties.crop.left.nextKeyframe`, `properties.crop.left.prevKeyframe`, `properties.crop.right.nextKeyframe`, `properties.crop.right.prevKeyframe`, `properties.crop.top.nextKeyframe`, `properties.crop.top.prevKeyframe`, `properties.motion.anchor.nextKeyframe`, `properties.motion.anchor.prevKeyframe`, `properties.motion.position.nextKeyframe`, `properties.motion.position.prevKeyframe`, `properties.motion.rotation.nextKeyframe`, `properties.motion.rotation.prevKeyframe`, `properties.motion.scale.nextKeyframe`, `properties.motion.scale.prevKeyframe`, `properties.opacity.opacity.nextKeyframe`, `properties.opacity.opacity.prevKeyframe`, `properties.volume.level.nextKeyframe`, `properties.volume.level.prevKeyframe`
+- **Reference Monitor**: `panel.ReferenceMonitor`, `panel.tab.ReferenceMonitor`, `reference.picture`, `reference.stepBack`, `reference.timecode`
+- **Source**: `panel.Source`, `panel.tab.Source`, `source.buttonEditor.reset`, `source.picture`, `source.timecode`, `source.transport.media.toggleProxies`
+- **Status bar**: `status.bar`, `status.job.cancel`, `status.job.progress`
+- **Text**: `panel.Text`, `text.captions.49.row`, `text.captions.import`, `text.captions.merge`, `text.captions.split`, `text.captions.style.color`, `text.tab.Captions`, `text.transcript.delete`, `text.transcript.deleteAll`, `text.transcript.extract`, `text.transcript.hits`, `text.transcript.lift`, `text.transcript.mode.extract`, `text.transcript.nextHit`, `text.transcript.paragraph.0`, `text.transcript.prevHit`
 - **Timecode**: `panel.Timecode`, `panel.tab.Timecode`, `timecode.row.{row}`
-- **Timeline**: `panel.tab.Timeline`, `timeline.audioScrollBar`, `timeline.audioScrollBar.track`, `timeline.clip.{clip}.inEdge`, `timeline.clip.{clip}.outEdge`, `timeline.divider`, `timeline.tab.{tab}`, `timeline.timecode`, `timeline.toggle.captions`, `timeline.track.{track}.header`, `timeline.track.{track}.resize`, `timeline.tracks`, `timeline.transition.{transition}`, `timeline.zoomBar`, `timeline.zoomBar.inHandle`, `timeline.zoomBar.outHandle`
+- **Timeline**: `panel.menu.Timeline.closeOthers`, `panel.tab.Timeline`, `timeline.audioScrollBar`, `timeline.audioScrollBar.track`, `timeline.captionTrack.C1`, `timeline.captionTrack.C2`, `timeline.clip.{clip}.inEdge`, `timeline.clip.{clip}.outEdge`, `timeline.divider`, `timeline.dropZone`, `timeline.split.audioIn`, `timeline.split.videoIn`, `timeline.tab.{tab}`, `timeline.timecode`, `timeline.toggle.captions`, `timeline.track.{track}.header`, `timeline.tracks`, `timeline.transition.{transition}`, `timeline.videoScrollBar`, `timeline.videoScrollBar.track`, `timeline.zoomBar`, `timeline.zoomBar.inHandle`, `timeline.zoomBar.outHandle`
+- **Tools**: `tools.Ellipse`, `tools.RateStretch`, `tools.Rectangle`, `tools.Remix`, `tools.Rolling`, `tools.Selection`, `tools.Slide`, `tools.TrackSelectBackward`, `tools.VerticalType`, `tools.Zoom`
