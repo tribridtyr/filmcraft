@@ -239,8 +239,14 @@ impl Step {
 enum Action {
     /// List what is on screen.
     Look,
-    /// Click an element (`right`: the secondary button, for context menus).
-    Click { id: String, right: bool },
+    /// Click an element (`right`: the secondary button, for context menus). `scroll`: first scroll
+    /// its panel or dialog until the element is on screen.
+    Click {
+        id: String,
+        right: bool,
+        #[serde(default)]
+        scroll: bool,
+    },
     /// Invoke a menu-bar command.
     Menu(String),
 }
@@ -256,8 +262,8 @@ impl Job {
         let mut v: Vec<String> = self.reach.iter().map(Step::describe).collect();
         v.push(match &self.action {
             Action::Look => "look".into(),
-            Action::Click { id, right: false } => format!("ui.click {id}"),
-            Action::Click { id, right: true } => format!("ui.click {id} button=right"),
+            Action::Click { id, right: false, .. } => format!("ui.click {id}"),
+            Action::Click { id, right: true, .. } => format!("ui.click {id} button=right"),
             Action::Menu(id) => format!("ui.menu.invoke {id}"),
         });
         v.join(" → ")
@@ -310,6 +316,8 @@ struct Outcome {
     found: Vec<Found>,
     effect: Option<Effect>,
     panic: Option<String>,
+    /// A `scroll` click that could not bring the element on screen.
+    unreachable: bool,
 }
 
 // ------------------------------------------------------------------ snapshots
@@ -664,6 +672,46 @@ fn try_close(d: &mut Driver, opened: &[Found]) -> Option<String> {
     None
 }
 
+/// The rectangle the element scrolls in: its panel's, or the open dialog's.
+fn container_of(d: &Driver, f: &Found) -> Option<egui::Rect> {
+    if f.dialog {
+        let ctx = &d.harness.ctx;
+        return ctx.memory(|m| m.top_modal_layer()).and_then(|l| ctx.memory(|m| m.area_rect(l.id)));
+    }
+    let title = f.region.strip_prefix("panel:")?;
+    d.app().auto.query("").into_iter().find_map(|e| panel_marker(&e.id).filter(|p| p.title() == title).map(|_| rect_of(e.rect)))
+}
+
+/// Wheel-scroll the panel or dialog holding `id` until its centre is on screen. False when it never
+/// gets there (a fixed-size area, a collapsed parent, an element that is not drawn).
+fn scroll_into_view(d: &mut Driver, id: &str) -> bool {
+    let mut last = None;
+    for _ in 0..60 {
+        let snap = capture(d);
+        let Some(f) = snap.els.iter().find(|f| f.id == id) else { return false };
+        if f.visible {
+            return true;
+        }
+        let Some(cont) = container_of(d, f) else { return false };
+        let c = rect_of(f.rect).center();
+        let (dx, dy) = (cont.center().x - c.x, cont.center().y - c.y);
+        // the wheel moves content: a positive delta brings earlier content into view
+        let (dx, dy) = (if cont.x_range().contains(c.x) { 0.0 } else { dx }, if cont.y_range().contains(c.y) { 0.0 } else { dy });
+        if (dx, dy) == (0.0, 0.0) || last == Some((c.x.round() as i32, c.y.round() as i32)) {
+            return false;
+        }
+        last = Some((c.x.round() as i32, c.y.round() as i32));
+        let at = egui::pos2(c.x.clamp(cont.min.x + 10.0, cont.max.x - 10.0), cont.center().y.clamp(cont.min.y + 10.0, cont.max.y - 10.0));
+        let (dx, dy) = (dx.clamp(-400.0, 400.0), dy.clamp(-400.0, 400.0));
+        let r = d.call("ui.scroll", json!({"x": at.x, "y": at.y, "dx": dx, "dy": dy}));
+        d.frames(SETTLE);
+        if r["ok"] != json!(true) {
+            return false;
+        }
+    }
+    false
+}
+
 fn run_job(job: &Job) -> Outcome {
     let mut d = Driver::new();
     let mut out = Outcome::default();
@@ -681,11 +729,18 @@ fn run_job(job: &Job) -> Outcome {
             add_roles(&d, &mut out.found);
         }
         Action::Click { .. } | Action::Menu(_) => {
+            if let Action::Click { id, scroll: true, .. } = &job.action
+                && !scroll_into_view(&mut d, id)
+            {
+                out.unreachable = true;
+                out.panic = d.app().ui_error.clone();
+                return out;
+            }
             let a = capture(&d);
             d.frames(SETTLE);
             let b = capture(&d);
             let reply = match &job.action {
-                Action::Click { id, right } => d.call("ui.click", json!({"id": id, "button": if *right { "right" } else { "left" }})),
+                Action::Click { id, right, .. } => d.call("ui.click", json!({"id": id, "button": if *right { "right" } else { "left" }})),
                 Action::Menu(id) => d.call("ui.menu.invoke", json!({"id": id})),
                 Action::Look => Value::Null,
             };
@@ -1300,13 +1355,15 @@ fn crawl(scope: Scope, name: &str) -> Crawl {
         let mut jobs: Vec<Job> = Vec::new();
         let mut keys: Vec<(String, bool)> = Vec::new();
         for (k, e) in &cr.entries {
-            if e.depth != depth || e.clicked || e.skip.is_some() || !e.visible || denied(&e.concrete).is_some() {
+            if e.depth != depth || e.clicked || e.skip.is_some() || denied(&e.concrete).is_some() {
                 continue;
             }
-            jobs.push(Job { reach: e.reach.clone(), action: Action::Click { id: e.concrete.clone(), right: false } });
+            // what is scrolled out of its panel or dialog is scrolled into view first
+            let scroll = !e.visible;
+            jobs.push(Job { reach: e.reach.clone(), action: Action::Click { id: e.concrete.clone(), right: false, scroll } });
             keys.push((k.clone(), false));
-            if scope.right && depth == 0 {
-                jobs.push(Job { reach: e.reach.clone(), action: Action::Click { id: e.concrete.clone(), right: true } });
+            if scope.right && depth == 0 && !scroll {
+                jobs.push(Job { reach: e.reach.clone(), action: Action::Click { id: e.concrete.clone(), right: true, scroll } });
                 keys.push((k.clone(), true));
             }
         }
@@ -1316,6 +1373,16 @@ fn crawl(scope: Scope, name: &str) -> Crawl {
             note(&mut cr, job, o);
             let Some(e) = cr.entries.get_mut(key) else { continue };
             e.clicked = true;
+            if o.unreachable {
+                e.skip = Some("outside the visible area of its panel or dialog and scrolling did not bring it into view".into());
+                continue;
+            }
+            // an element that was there when it was found but is not drawn when its reach is replayed
+            // (it appears only after earlier clicks, or moves off screen): not a broken control
+            if o.effect.as_ref().is_some_and(|fx| fx.text.starts_with("error: no element")) {
+                e.skip = Some("could not be found again from a fresh start (it is drawn only after earlier clicks, or moves off screen)".into());
+                continue;
+            }
             let (Action::Click { id, .. }, Some(fx)) = (&job.action, &o.effect) else { continue };
             if *right {
                 // only what a right-click opens is worth keeping
@@ -1562,7 +1629,7 @@ fn every_visible_element_and_menu_command_runs_without_a_panic() {
 #[ignore = "the full crawl (minutes); writes docs/ui-map.json and docs/ui-map.md"]
 fn crawl_writes_the_ui_map() {
     let t0 = std::time::Instant::now();
-    let cr = crawl(Scope { preps: true, menus: true, depth: 2, right: true }, "full");
+    let cr = crawl(Scope { preps: true, menus: true, depth: 3, right: true }, "full");
     write_map(&cr, &map_dir().unwrap_or_else(|| Path::new(env!("CARGO_MANIFEST_DIR")).join("../../docs")));
     eprintln!(
         "{} jobs, {} elements, {} menu commands, {} reach errors in {:?}",
