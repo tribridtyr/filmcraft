@@ -2543,6 +2543,11 @@ fn build() -> Vec<CommandSpec> {
             let q = s.project.sequence(id).ok_or(EngineError::NoSequence)?;
             Ok(inspect_sequence(s, id, q))
         }),
+        query!("sequence.verify", "Verify Sequence", r#"{"item":id?}"#, |s, p| {
+            let id = item_p(p, "item").or(s.state.active_sequence).ok_or(EngineError::NoSequence)?;
+            let q = s.project.sequence(id).ok_or(EngineError::NoSequence)?;
+            Ok(crate::sequence_verify::verify(s, q))
+        }),
         query!("state.inspect", "Inspect Editor State", "{}", |s, _| Ok(serde_json::to_value(&s.state).unwrap_or_default())),
         query!(
             "effects.list",

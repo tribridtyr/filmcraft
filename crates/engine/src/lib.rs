@@ -49,6 +49,7 @@ pub mod scopes;
 pub mod screen_activity;
 pub mod sequence_extras;
 pub mod sequence_tools;
+mod sequence_verify;
 pub mod settings;
 pub mod shortcut_presets;
 pub mod shortcuts;
@@ -1149,6 +1150,8 @@ mod sequence_inspect_tests;
 mod sequence_tabs_tests;
 #[cfg(test)]
 mod sequence_tools_tests;
+#[cfg(test)]
+mod sequence_verify_tests;
 #[cfg(test)]
 mod settings_tests;
 #[cfg(test)]

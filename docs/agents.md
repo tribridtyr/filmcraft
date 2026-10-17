@@ -72,8 +72,9 @@ claude mcp add -s user filmcraft -- /Applications/FilmCraft.app/Contents/MacOS/f
 | `ui_control` | bridge | call any control-channel method directly (`ui.set`, `ui.scroll`, `ui.timeline.locate`, …) |
 | `ui_map` | both | the map of every button, field and menu command: where it is, how to make it visible, what it does, the command behind it (`prefix`, `panel`, `kind`, `query`, `limit`, `offset`); see below |
 
-Typical loop: `project_inspect` / `sequence_inspect` → get ids → `command_run` → `render_frame` or
-`ui_screenshot` → look at the result → `edit.undo` if it's wrong.
+Typical loop: `project_inspect` / `sequence_inspect` → get ids → `command_run` → `sequence.verify` →
+`render_frame` or `ui_screenshot` → look at the result → `edit.undo` if it's wrong (see
+[Editing so it is right the first time](#editing-so-it-is-right-the-first-time)).
 
 ### Every button: `ui_map`, then `ui_click`
 
@@ -110,6 +111,47 @@ To press any button:
 
 After changing the UI, regenerate the map: `cargo test -p filmcraft-ui-egui --test ui_map_crawl --
 --ignored` (a few minutes; it rewrites `docs/ui-map.json` and `docs/ui-map.md`).
+
+### Editing so it is right the first time
+
+An agent that edits for someone who only reviews the result has to prove each edit before it moves
+on. The loop below uses only read-only checks, so it costs nothing and changes nothing. Do not skip a
+step because the edit "obviously worked".
+
+1. **Look first.** `doc_inspect` (ids of media, sequences, clips). `media.findMissing` if anything
+   might be offline. Note the sequence `duration` (ticks) and the clip count: they are the baseline.
+2. **Edit with commands**, never by guessing at pixels: `command_run`, or `command_batch` with
+   `stop_on_error: true` so a failing step stops the batch instead of leaving half an edit. Pass ids
+   from the inspect calls. Time is ticks (254 016 000 000 per second) or `seconds` / `frame` /
+   `timecode` parameters; never add up floating-point seconds yourself.
+3. **Verify the structure: `sequence.verify`.** It must come back `ok: true` (`errors: 0`). It lists
+   overlaps, holes between clips (`gap`, with the `sequence.closeGap` call that closes it; a
+   sync-lock conflict means another synced track has no hole there), zero-length clips, clips that
+   play past their media (`source-overrun`), offline media, disabled clips and hidden or muted
+   tracks, linked picture and sound that drifted apart (`link-start-drift`, `link-length-drift`),
+   picture and sound ending at different times (`av-length`) and transitions whose clips are gone.
+   Each issue has the track, clip ids and time. Fix every error. Fix every warning or say why it is
+   intended (a J or L cut shows as `link-start-drift`: that one is deliberate).
+4. **Check the arithmetic.** `sequence.inspect` again: the new `duration` must equal the old one
+   minus what you removed (the removal commands report `ticks` / `seconds`) plus what you added, to
+   the tick. A different number means something else moved; `edit.undo` and look again.
+5. **Check the sound by numbers** (you cannot listen): `waveform.joins` (cuts that clip a word or
+   leave loose silence; `waveform.fixJoins` repairs them, `dryRun: true` first), `waveform.silences`
+   (dead air), `waveform.loudness` (target −14 LUFS, true peak −1.5 dBTP).
+6. **Check the picture.** `render_frame` at the first and last frame of every edit and a frame on each
+   side of every cut you made; look at the images. `video.auditJumpCuts` for talking-head cuts.
+7. **Speech edits** go through the transcript: `transcript.find` (`fillers`, `pauses`, `text`) shows
+   what a removal will take before `transcript.removeFillers` / `removePauses` / `deleteHits` do it;
+   `transcript.editWords` corrects text without touching timing. Run steps 3–5 afterwards: a removal
+   that leaves a click or a clipped word is caught by `waveform.joins`.
+8. **If a check fails**, undo (`edit.undo`; `history.list` shows what is on the stack) and redo the
+   edit differently. Do not stack a repair on a bad edit unless `sequence.verify` proves the result.
+9. **Leave a trail for the reviewer.** `markers.add {time, name, comment}` at each decision the
+   person may want to check (a long pause kept on purpose, a line cut, a fix), then `file.save`.
+   The person reviews the timeline, so the markers say what to look at.
+
+A final pass before you say "done": `sequence.verify` → `ok`, `waveform.joins` → clean,
+`waveform.loudness` → on target, `render_frame` of the first, last and middle frames, `file.save`.
 
 ### Conventions
 
