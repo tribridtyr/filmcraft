@@ -245,6 +245,17 @@ or a single panel (`{"panel": "Timeline"}`). Look at every screenshot. Examples 
 [agents.md](agents.md). The headless path (`filmcraft-cli run script.jsonl`, MCP `--demo`) covers
 engine behaviour without a window.
 
+### MCP smoke test
+
+`bash scripts/mcp-smoke.sh` checks the MCP server the way an agent uses it, through the official
+[MCP Inspector](https://github.com/modelcontextprotocol/inspector) CLI (pinned; override with
+`INSPECTOR_VERSION`). It needs Node ≥ 22.19 and `jq`, runs against the headless `mcp --demo` server
+(never a real project) with a scratch Inspector store, takes about 30 s, and stops at the first
+failure. It checks the handshake, that the tools agents rely on exist with schemas free of
+portability errors (`--strict`), that `sequence.verify` passes, that edit → verify → undo → verify
+keeps the sequence `ok` and the same length, and that an unknown command is refused (exit 5).
+Run it after changing anything in `crates/automation` or a command's parameters.
+
 ## 5. Performance
 
 | Benchmark | Command |
