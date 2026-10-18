@@ -673,10 +673,14 @@ fn try_close(d: &mut Driver, opened: &[Found]) -> Option<String> {
 }
 
 /// The rectangle the element scrolls in: its panel's, or the open dialog's.
-fn container_of(d: &Driver, f: &Found) -> Option<egui::Rect> {
+fn container_of(d: &Driver, f: &Found, els: &[Found]) -> Option<egui::Rect> {
     if f.dialog {
         let ctx = &d.harness.ctx;
-        return ctx.memory(|m| m.top_modal_layer()).and_then(|l| ctx.memory(|m| m.area_rect(l.id)));
+        if let Some(r) = ctx.memory(|m| m.top_modal_layer()).and_then(|l| ctx.memory(|m| m.area_rect(l.id))) {
+            return Some(r);
+        }
+        // a dialog that is a window, not a modal: the box around what of it is on screen
+        return els.iter().filter(|e| e.dialog && e.visible).map(|e| rect_of(e.rect)).reduce(|a, b| a.union(b));
     }
     let title = f.region.strip_prefix("panel:")?;
     d.app().auto.query("").into_iter().find_map(|e| panel_marker(&e.id).filter(|p| p.title() == title).map(|_| rect_of(e.rect)))
@@ -686,26 +690,40 @@ fn container_of(d: &Driver, f: &Found) -> Option<egui::Rect> {
 /// gets there (a fixed-size area, a collapsed parent, an element that is not drawn).
 fn scroll_into_view(d: &mut Driver, id: &str) -> bool {
     let mut last = None;
+    let mut stalled = 0;
+    let mut anchor: Option<egui::Pos2> = None;
     for _ in 0..120 {
         let snap = capture(d);
         let Some(f) = snap.els.iter().find(|f| f.id == id) else { return false };
         if f.visible {
             return true;
         }
-        let Some(cont) = container_of(d, f) else { return false };
+        let Some(cont) = container_of(d, f, &snap.els) else { return false };
         let c = rect_of(f.rect).center();
         let (dx, dy) = (cont.center().x - c.x, cont.center().y - c.y);
         // the wheel moves content: a positive delta brings earlier content into view
         let (dx, dy) = (if cont.x_range().contains(c.x) { 0.0 } else { dx }, if cont.y_range().contains(c.y) { 0.0 } else { dy });
-        if (dx, dy) == (0.0, 0.0) || last == Some((c.x.round() as i32, c.y.round() as i32)) {
+        // smooth scrolling is still moving after a wheel step: give up only after a few steps that moved nothing
+        stalled = if last == Some((c.x.round() as i32, c.y.round() as i32)) { stalled + 1 } else { 0 };
+        if (dx, dy) == (0.0, 0.0) || stalled >= 4 {
             return false;
         }
         last = Some((c.x.round() as i32, c.y.round() as i32));
-        let at = egui::pos2(c.x.clamp(cont.min.x + 10.0, cont.max.x - 10.0), cont.center().y.clamp(cont.min.y + 10.0, cont.max.y - 10.0));
-        // a long list (the shortcuts dialog is ~47 000 px) needs big steps
+        // Over a visible sibling (same family, same region) when there is one: it is in the same
+        // scroll area, whereas the middle of the dialog may be over another. Chosen once, on the
+        // first step, from the layout as it opens, and kept: rows scrolled out of a list still count
+        // as on screen, so a later pick could land above the list.
+        let at = *anchor.get_or_insert_with(|| {
+            let family = |id: &str| id.splitn(3, '.').take(2).collect::<Vec<_>>().join(".");
+            let sibling = snap.els.iter().find(|e| e.visible && e.region == f.region && e.dialog == f.dialog && family(&e.id) == family(&f.id));
+            match sibling {
+                Some(e) => rect_of(e.rect).center(),
+                None => egui::pos2(c.x.clamp(cont.min.x + 10.0, cont.max.x - 10.0), cont.center().y.clamp(cont.min.y + 10.0, cont.max.y - 10.0)),
+            }
+        });
         let (dx, dy) = (dx.clamp(-4000.0, 4000.0), dy.clamp(-4000.0, 4000.0));
         let r = d.call("ui.scroll", json!({"x": at.x, "y": at.y, "dx": dx, "dy": dy}));
-        d.frames(SETTLE);
+        d.frames(SETTLE * 3);
         if r["ok"] != json!(true) {
             return false;
         }
