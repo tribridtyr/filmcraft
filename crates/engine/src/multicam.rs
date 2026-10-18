@@ -638,7 +638,9 @@ fn create_multicam(s: &mut Session, p: &Value) -> Result<Value> {
         {
             let q = pr.sequence_mut(sid).ok_or(EngineError::NoSequence)?;
             for (kind, idx, it) in placed {
-                q.tracks_mut(kind)[idx].items.push(it);
+                if let Some(tr) = q.tracks_mut(kind).get_mut(idx) {
+                    tr.items.push(it);
+                }
             }
             for cam in &cameras {
                 if let Some(vt) = cam.video_track.and_then(|id| q.video_tracks.iter_mut().find(|x| x.id == id)) {

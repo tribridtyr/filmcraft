@@ -686,7 +686,7 @@ fn container_of(d: &Driver, f: &Found) -> Option<egui::Rect> {
 /// gets there (a fixed-size area, a collapsed parent, an element that is not drawn).
 fn scroll_into_view(d: &mut Driver, id: &str) -> bool {
     let mut last = None;
-    for _ in 0..60 {
+    for _ in 0..120 {
         let snap = capture(d);
         let Some(f) = snap.els.iter().find(|f| f.id == id) else { return false };
         if f.visible {
@@ -702,7 +702,8 @@ fn scroll_into_view(d: &mut Driver, id: &str) -> bool {
         }
         last = Some((c.x.round() as i32, c.y.round() as i32));
         let at = egui::pos2(c.x.clamp(cont.min.x + 10.0, cont.max.x - 10.0), cont.center().y.clamp(cont.min.y + 10.0, cont.max.y - 10.0));
-        let (dx, dy) = (dx.clamp(-400.0, 400.0), dy.clamp(-400.0, 400.0));
+        // a long list (the shortcuts dialog is ~47 000 px) needs big steps
+        let (dx, dy) = (dx.clamp(-4000.0, 4000.0), dy.clamp(-4000.0, 4000.0));
         let r = d.call("ui.scroll", json!({"x": at.x, "y": at.y, "dx": dx, "dy": dy}));
         d.frames(SETTLE);
         if r["ok"] != json!(true) {

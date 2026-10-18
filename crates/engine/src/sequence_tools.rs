@@ -434,12 +434,16 @@ fn make_subsequence(s: &mut Session, p: &Value) -> Result<Value> {
         let nq = pr.sequence_mut(nid).ok_or(EngineError::NoSequence)?;
         lay_out_tracks_like(nq, &q);
         for (kind, ti, it) in placed {
-            nq.tracks_mut(kind)[ti].items.push(it);
+            if let Some(tr) = nq.tracks_mut(kind).get_mut(ti) {
+                tr.items.push(it);
+            }
         }
         // by reference: a loop that consumed this Vec dropped every transition when built at
         // opt-level 1 with rustc 1.97.0 (it ran zero times; correct at opt-level 0)
         for (kind, ti, t) in &transitions {
-            nq.tracks_mut(*kind)[*ti].transitions.push(t.clone());
+            if let Some(tr) = nq.tracks_mut(*kind).get_mut(*ti) {
+                tr.transitions.push(t.clone());
+            }
         }
         for tr in nq.all_tracks_mut() {
             tr.sort();
