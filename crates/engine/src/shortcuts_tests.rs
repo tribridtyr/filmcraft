@@ -85,12 +85,14 @@ fn assign_reassigns_conflicts_and_undoes() {
     s.execute("shortcuts.set", json!({"command": "edit.undo", "keys": "Cmd+Z", "add": true})).unwrap();
     assert_eq!(s.shortcuts.for_command("edit.undo").iter().filter(|b| b.panel.is_none()).count(), 2);
     let r = s.execute("shortcuts.set", json!({"command": "edit.redo", "keys": "M", "keepConflicts": true})).unwrap();
-    assert_eq!(r["conflicts"].as_array().unwrap().len(), 1, "{r}");
+    // off macOS Ctrl and Cmd are one key, so a few default Mac bindings also collide there: count
+    // only the conflict made here
+    assert_eq!(r["conflicts"].as_array().unwrap().iter().filter(|c| c["keys"] == "M").count(), 1, "{r}");
     let c = s.execute("shortcuts.conflicts", json!({"platform": "mac"})).unwrap();
     assert_eq!(c["conflicts"][0]["keys"], json!("M"));
     // undo / redo within the editor
     s.execute("shortcuts.undo", json!({})).unwrap();
-    assert!(s.execute("shortcuts.conflicts", json!({})).unwrap()["conflicts"].as_array().unwrap().is_empty());
+    assert!(s.execute("shortcuts.conflicts", json!({"platform": "mac"})).unwrap()["conflicts"].as_array().unwrap().is_empty());
     s.execute("shortcuts.undo", json!({})).unwrap();
     s.execute("shortcuts.undo", json!({})).unwrap();
     assert_eq!(s.shortcuts.primary("edit.undo").as_deref(), Some("Cmd+Z"));
