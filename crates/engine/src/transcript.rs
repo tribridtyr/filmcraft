@@ -34,6 +34,28 @@ pub fn models_dir() -> Option<std::path::PathBuf> {
     crate::autosave::default_data_dir().map(|d| d.join("models"))
 }
 
+/// Models shipped inside the app: `<app>/Contents/Resources/models` in a macOS bundle, else
+/// `models/` next to the executable. Read-only; the packaging script fills it (macOS builds carry
+/// the default model, so Transcribe works at once, offline).
+pub fn bundled_models_dir() -> Option<std::path::PathBuf> {
+    let exe = std::env::current_exe().ok()?;
+    let bin = exe.parent()?;
+    [bin.parent().map(|c| c.join("Resources").join("models")), Some(bin.join("models"))].into_iter().flatten().find(|d| d.is_dir())
+}
+
+/// The directory to load `m` from: the user's model folder if it is installed there, else the
+/// bundled one, else the user's folder (where a download goes).
+pub fn models_dir_for(m: &filmcraft_speech::models::ModelInfo) -> Option<std::path::PathBuf> {
+    let user = models_dir();
+    if user.as_ref().is_some_and(|d| filmcraft_speech::models::installed(d, m)) {
+        return user;
+    }
+    match bundled_models_dir() {
+        Some(b) if filmcraft_speech::models::installed(&b, m) => Some(b),
+        _ => user,
+    }
+}
+
 /// The speech model Transcribe uses (Settings ▸ Media Analysis ▸ Speech model).
 #[derive(Clone, Debug, PartialEq)]
 pub struct ModelStatus {
@@ -57,7 +79,7 @@ pub fn model_status(s: &Session) -> Option<ModelStatus> {
     }
     let m = filmcraft_speech::models::find(&s.prefs.media_analysis.speech_model)
         .or_else(|| filmcraft_speech::models::find(filmcraft_speech::models::DEFAULT_MODEL))?;
-    let dir = models_dir();
+    let dir = models_dir_for(m);
     let installed = dir.as_ref().is_some_and(|d| filmcraft_speech::models::installed(d, m));
     let download_bytes = dir.as_ref().map(|d| filmcraft_speech::models::missing_bytes(d, m)).unwrap_or(m.size());
     Some(ModelStatus { id: m.id.into(), name: m.name.into(), installed, download_bytes, license: m.license.into(), source: m.source.into() })
@@ -239,7 +261,7 @@ fn recogniser(s: &Session, p: &Value) -> Result<Recogniser> {
     if !filmcraft_speech::available() {
         return Err(EngineError::Other(NO_SPEECH.into()));
     }
-    let dir = models_dir().ok_or_else(|| EngineError::Other("no data directory for speech models".into()))?;
+    let dir = models_dir_for(m).ok_or_else(|| EngineError::Other("no data directory for speech models".into()))?;
     let download = bool_p(p, "download").unwrap_or(false);
     let can_fetch = download && cfg!(feature = "speech-download");
     if !(filmcraft_speech::models::installed(&dir, m) || can_fetch) {
@@ -978,7 +1000,7 @@ fn models(_: &mut Session, _: &Value) -> Result<Value> {
         "models": filmcraft_speech::models::catalogue().iter().map(|m| json!({
             "id": m.id, "name": m.name, "multilingual": m.multilingual, "description": m.description,
             "license": m.license, "source": m.source, "size": m.size(),
-            "installed": dir.as_ref().is_some_and(|d| filmcraft_speech::models::installed(d, m)),
+            "installed": models_dir_for(m).is_some_and(|d| filmcraft_speech::models::installed(&d, m)),
         })).collect::<Vec<_>>(),
     }))
 }

@@ -109,6 +109,16 @@ cp "$WORK/bin/filmcraft" "$APP/Contents/MacOS/FilmCraft"
 # The CLI and MCP server ride along, so an agent always has the one matching this app:
 # FilmCraft.app/Contents/MacOS/filmcraft-cli mcp --bridge 127.0.0.1:9876 (it starts the app itself).
 cp "$WORK/bin/filmcraft-cli" "$APP/Contents/MacOS/filmcraft-cli"
+# The default speech model rides inside the app (about 1.6 GB), so Transcribe works at once and
+# offline. Downloaded with SHA-256 checks and cached in $MODEL_CACHE. FILMCRAFT_BUNDLE_MODEL=0
+# skips it (the app then offers the download on first use).
+if [ "${FILMCRAFT_BUNDLE_MODEL:-1}" != 0 ]; then
+  MODEL_CACHE="${FILMCRAFT_MODEL_CACHE:-$CARGO_TARGET_DIR/speech-models}"
+  echo "==> bundling the default speech model"
+  (cd "$ROOT" && cargo run --release --locked -q -p filmcraft-speech --features download --example fetch_model -- "$MODEL_CACHE")
+  mkdir -p "$APP/Contents/Resources/models"
+  ditto "$MODEL_CACHE" "$APP/Contents/Resources/models"
+fi
 cp "$ROOT/assets/app-icon/filmcraft.icns" "$APP/Contents/Resources/FilmCraft.icns"
 sed -e "s/@VERSION@/$VERSION/g" -e "s/@SHORT_VERSION@/$SHORT_VERSION/g" \
   -e "s/@BUILD_SHA@/${FILMCRAFT_BUILD_SHA:-unknown}/g" \

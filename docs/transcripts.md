@@ -104,7 +104,7 @@ install any recogniser in `Session::transcriber`, which enables transcription in
 
 ### Models
 
-Weights are **never** bundled or committed. They are downloaded on request into
+Weights are never committed to the repository. The macOS package bundles the default model (large-v3-turbo, about 1.6 GB) in `FilmCraft.app/Contents/Resources/models`, fetched and SHA-256-checked by `packaging/macos/package.sh` (`FILMCRAFT_BUNDLE_MODEL=0` skips it); the app loads it from there with no download, and a model installed in the data directory takes precedence. Any other model is downloaded on request into
 `<data dir>/models/<id>/` (see `filmcraft_engine::autosave::default_data_dir`), each file pinned to a
 revision of OpenAI's Hugging Face repositories and checked against its SHA-256:
 
