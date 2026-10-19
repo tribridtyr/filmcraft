@@ -59,7 +59,7 @@ if [ "$SKIP_BUILD" = 0 ]; then
   args=()
   for t in "${TARGETS[@]}"; do args+=(--target "$t"); done
   # Speech-to-text (Text panel ▸ Transcribe) with Whisper on the Apple GPU, CPU as the fallback.
-  # FILMCRAFT_FEATURES="" builds without it.
+  # Now also the default of both apps; FILMCRAFT_FEATURES only adds to it.
   features="${FILMCRAFT_FEATURES-filmcraft/metal,filmcraft-cli/metal}"
   [ -n "$features" ] && args+=(--features "$features")
   (cd "$ROOT" && cargo build --release --locked -p filmcraft -p filmcraft-cli "${args[@]}")

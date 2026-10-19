@@ -13,10 +13,12 @@ name = "filmcraft-cli"
 path = "src/main.rs"
 
 [features]
-default = []
+default = ["whisper"]
 # Speech-to-text (Text panel ▸ Transcribe) with Whisper on the CPU, and model downloads.
+# On by default, so every build can transcribe; `--no-default-features` builds without it.
 whisper = ["filmcraft-engine/whisper", "filmcraft-engine/speech-download"]
-# Speech-to-text on the Apple GPU (macOS; the CPU remains the fallback).
+# Speech-to-text on the Apple GPU (macOS; the CPU remains the fallback). Always on for macOS
+# builds (see the macOS target dependency below); the feature stays for explicit use.
 metal = ["whisper", "filmcraft-engine/speech-metal"]
 
 [dependencies]
@@ -31,3 +33,7 @@ filmcraft-time = { workspace = true }
 filmcraft-automation = { workspace = true }
 serde_json = { workspace = true }
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+
+# macOS builds always get Whisper on the Apple GPU (falls back to the CPU at run time).
+[target.'cfg(target_os = "macos")'.dependencies]
+filmcraft-engine = { workspace = true, features = ["speech-metal"] }

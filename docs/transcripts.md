@@ -87,7 +87,7 @@ precision through candle's Metal backend, falling back to the CPU when no Metal 
 created: large-v3-turbo transcribes a 3.4-minute screen recording in about 6 s on an M4 Max
 (about 88 s on the CPU alone). The macOS packages are built with it (`packaging/macos/package.sh`).
 
-The features are **optional**, off by default and never built for the web:
+The features are on by default in the `filmcraft` and `filmcraft-cli` apps (so a plain `cargo run -p filmcraft` can transcribe, and macOS builds always use the GPU), off in the library crates, and never built for the web. `--no-default-features` builds an app without them:
 
 - `whisper` (on `filmcraft-speech`, `filmcraft-engine`, and the `filmcraft` / `filmcraft-cli`
   apps, where it also enables downloads): candle inference.

@@ -11,10 +11,12 @@ build = "build.rs"
 workspace = true
 
 [features]
-default = []
+default = ["whisper"]
 # Speech-to-text (Text panel ▸ Transcribe) with Whisper on the CPU, and model downloads.
+# On by default, so every build can transcribe; `--no-default-features` builds without it.
 whisper = ["filmcraft-engine/whisper", "filmcraft-engine/speech-download"]
-# Speech-to-text on the Apple GPU (macOS; the CPU remains the fallback).
+# Speech-to-text on the Apple GPU (macOS; the CPU remains the fallback). Always on for macOS
+# builds (see the macOS target dependency below); the feature stays for explicit use.
 metal = ["whisper", "filmcraft-engine/speech-metal"]
 
 [dependencies]
@@ -30,6 +32,7 @@ cpal = "0.16"
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
+filmcraft-engine = { workspace = true, features = ["speech-metal"] }
 muda = "0.21"
 objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSProcessInfo", "NSString", "NSArray"] }
 objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "NSApplication", "NSResponder", "NSWindow"] }
