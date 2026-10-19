@@ -32,6 +32,48 @@ fn join_error(e: tokio::task::JoinError) -> AutomationError {
     }
 }
 
+/// Make a tool's input schema plain enough for every model provider. `Option<T>` comes out as
+/// `"type": ["integer", "null"]` and a free-form `Value` as an empty schema; both are legal JSON
+/// Schema, but clients that map tools onto a single-`type` dialect (Gemini's function declarations)
+/// reject or drop them. Optional fields are already left out of `required`, so the `null` adds
+/// nothing; the free-form fields (`params`, `from`, `to`, `modifiers`) are all JSON objects.
+pub(crate) fn portable_schema(schema: &mut schemars::Schema) {
+    fn simplify(v: &mut Value) {
+        match v {
+            Value::Bool(true) => *v = json!({"type": "object"}),
+            Value::Object(o) => {
+                if let Some(Value::Array(types)) = o.get("type") {
+                    let mut real = types.iter().filter(|t| t.as_str() != Some("null"));
+                    if let (Some(only), None) = (real.next().cloned(), real.next()) {
+                        o.insert("type".into(), only);
+                    }
+                }
+                if o.get("default") == Some(&Value::Null) {
+                    o.remove("default");
+                }
+                if !["type", "$ref", "anyOf", "oneOf", "allOf", "enum", "const"].iter().any(|k| o.contains_key(*k)) {
+                    o.insert("type".into(), json!("object"));
+                }
+            }
+            _ => {}
+        }
+    }
+    fn properties(o: &mut serde_json::Map<String, Value>) {
+        if let Some(Value::Object(props)) = o.get_mut("properties") {
+            props.values_mut().for_each(simplify);
+        }
+    }
+    let Some(root) = schema.as_object_mut() else { return };
+    properties(root);
+    if let Some(Value::Object(defs)) = root.get_mut("$defs") {
+        for d in defs.values_mut() {
+            if let Value::Object(o) = d {
+                properties(o);
+            }
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct FilmcraftMcp {
     backend: Arc<Backend>,
@@ -39,6 +81,7 @@ pub struct FilmcraftMcp {
 }
 
 #[derive(Debug, Default, Deserialize, JsonSchema)]
+#[schemars(transform = portable_schema)]
 pub struct ListParams {
     /// Only commands whose id or label contains this text (case-insensitive).
     #[serde(default)]
@@ -49,6 +92,7 @@ pub struct ListParams {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+#[schemars(transform = portable_schema)]
 pub struct RunParams {
     /// Command id, e.g. `sequence.addEdit`, `timeline.trim`, `effects.apply`, `file.import`.
     pub id: String,
@@ -58,6 +102,7 @@ pub struct RunParams {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+#[schemars(transform = portable_schema)]
 pub struct BatchStep {
     /// Command id.
     pub id: String,
@@ -67,6 +112,7 @@ pub struct BatchStep {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+#[schemars(transform = portable_schema)]
 pub struct BatchParams {
     /// Commands to run in order.
     pub steps: Vec<BatchStep>,
@@ -76,6 +122,7 @@ pub struct BatchParams {
 }
 
 #[derive(Debug, Default, Deserialize, JsonSchema)]
+#[schemars(transform = portable_schema)]
 pub struct RenderParams {
     /// Timeline time in seconds (default: the playhead).
     #[serde(default)]
@@ -86,6 +133,7 @@ pub struct RenderParams {
 }
 
 #[derive(Debug, Default, Deserialize, JsonSchema)]
+#[schemars(transform = portable_schema)]
 pub struct ShotParams {
     /// Panel to crop to (e.g. `Timeline`, `Program`); omit for the whole window.
     #[serde(default)]
@@ -96,6 +144,7 @@ pub struct ShotParams {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+#[schemars(transform = portable_schema)]
 pub struct ClickParams {
     /// Element id from `ui_elements` (e.g. `timeline.track.V1.lock`, `tools.Razor`, `project.item.12`).
     #[serde(default)]
@@ -117,6 +166,7 @@ pub struct ClickParams {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+#[schemars(transform = portable_schema)]
 pub struct DragParams {
     /// Start: {"id":..} or {"x":..,"y":..} (optionally "fx"/"fy" fractions inside the element).
     pub from: Value,
@@ -129,17 +179,20 @@ pub struct DragParams {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+#[schemars(transform = portable_schema)]
 pub struct KeyParams {
     /// Key with optional modifiers, e.g. `Space`, `Cmd+K`, `Shift+Delete`, `I`, `L`.
     pub key: String,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+#[schemars(transform = portable_schema)]
 pub struct TypeParams {
     pub text: String,
 }
 
 #[derive(Debug, Default, Deserialize, JsonSchema)]
+#[schemars(transform = portable_schema)]
 pub struct ElementsParams {
     /// Only element ids starting with this prefix (e.g. `timeline.clip.`).
     #[serde(default)]
@@ -147,6 +200,7 @@ pub struct ElementsParams {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+#[schemars(transform = portable_schema)]
 pub struct ControlParams {
     /// Any control-channel method (e.g. `ui.set`, `ui.scroll`, `ui.timeline.hit`, `ui.playback`).
     pub method: String,

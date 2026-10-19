@@ -74,7 +74,11 @@ tools="$(inspect --method tools/list --strict)" || status=$?
 want='["command_list","command_run","command_batch","doc_inspect","sequence_inspect","render_frame","ui_map"]'
 jq -e --argjson want "$want" '[.result.tools[].name] as $have | $want - $have | length == 0' > /dev/null <<< "$tools" \
   || fail "a required tool is missing (wanted $want)"
-pass "$(jq '.result.tools | length' <<< "$tools") tools, schemas clean ($(jq '[.schemaFindings[]?.findings[]?] | length' <<< "$tools") portability warnings)"
+# Warnings do not fail --strict, but the schemas are clean today (nullable types and untyped fields
+# are rewritten by `portable_schema` in crates/automation/src/server.rs), so keep them that way.
+findings="$(jq '[.schemaFindings[]?.findings[]?] | length' <<< "$tools")"
+[ "$findings" -eq 0 ] || fail "$findings schema portability findings: $(jq -c '[.schemaFindings[] | {toolName, rules: [.findings[].rule]}]' <<< "$tools") (add \`#[schemars(transform = portable_schema)]\` to the new params struct)"
+pass "$(jq '.result.tools | length' <<< "$tools") tools, schemas clean"
 
 # 3. The demo sequence verifies.
 verify="$(call command_run '{"id":"sequence.verify","params":{}}')"
