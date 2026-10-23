@@ -22,7 +22,7 @@ the control channel and MCP agents can do the same.
 
 | Command | What it does |
 |---|---|
-| `transcript.generate` | Transcribe media items (`items`, else the Project selection, else the media of the sequence's audio clips). Params: `model` (default: Settings ▸ Speech model), `language` (`auto` = detect), `diarize`, `maxSpeakers`, `download` (fetch the model first when it isn't installed), `wait` (default `true`: run here and return the report; `false`: run as a background job with progress, as the Text panel does). One undo step. |
+| `transcript.generate` | Transcribe media items (`items`, else the Project selection, else the media of the sequence's audio clips). Params: `model` (default: Settings ▸ Speech model), `language` (`auto` = detect), `diarize`, `maxSpeakers`, `verbatim` (default `true`: prime Whisper so it keeps um/uh; `false` lets it tidy them away), `download` (fetch the model first when it isn't installed), `wait` (default `true`: run here and return the report; `false`: run as a background job with progress, as the Text panel does). One undo step. |
 | `transcript.find` | The Text panel's search with its filter: `filter` `text` (with `query`), `fillers` or `pauses` (`minSeconds` overrides the pause length). Returns the results with what each covers and what Delete would remove (`cut`). |
 | `transcript.deleteHits` | Delete one result (`hit`, its index in `transcript.find`) or all of them, `mode` `extract` (ripple; the default) or `lift`, on every unlocked track. One undo step. Pause cuts keep the margins in the settings (`keepAfterSeconds`, `keepBeforeSeconds` override them). |
 | `transcript.findPauses` | Measure the voice of transcripts that have no voice map (imported, or made before voice analysis), so their pauses come from the waveform (background job with `wait: false`). |
@@ -79,7 +79,10 @@ Alt+Backspace lifts it. **Return** (Edit Segment) or a double click on a word tu
 Recognition goes through the `Transcriber` trait (`crates/speech`). The built-in recogniser is
 OpenAI's Whisper, run in pure Rust on [candle](https://github.com/huggingface/candle) on the CPU,
 with timestamp decoding, language detection and word times from cross-attention alignment (see the
-`filmcraft_speech::whisper` module docs). Speakers are labelled by clustering per-chunk MFCC
+`filmcraft_speech::whisper` module docs). Whisper normally drops "um" and "uh", which would leave the Filler filter nothing to find, so each
+window is preceded by a short disfluent prompt (`filmcraft_speech::VERBATIM_PROMPT`, fed as
+`<|startofprev|>` previous dialogue; `verbatim: false` turns it off). Priming makes fillers likely,
+not certain: check it against your own footage. Speakers are labelled by clustering per-chunk MFCC
 statistics (`filmcraft_speech::diarize`); no model is involved.
 
 With the `metal` feature (`speech-metal` on the engine) Whisper runs on the Apple GPU in half

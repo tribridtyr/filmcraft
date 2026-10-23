@@ -78,11 +78,20 @@ pub struct Options {
     pub diarize: bool,
     /// Upper bound for the number of speakers found.
     pub max_speakers: usize,
+    /// Text Whisper reads as the "previous" dialogue before each window. Whisper imitates its
+    /// style, so a prompt that contains "um", "uh" and false starts keeps them in the transcript
+    /// (otherwise Whisper tidies them away and filler-word detection has nothing to find).
+    /// `None` = no prompt.
+    pub initial_prompt: Option<String>,
 }
+
+/// The default [`Options::initial_prompt`]: a short, disfluent sentence so that Whisper keeps
+/// fillers and hesitations (Premiere's text-based editing needs them verbatim).
+pub const VERBATIM_PROMPT: &str = "Umm, let me think like, hmm... Okay, here's what I'm, like, thinking. Uh, so, yeah.";
 
 impl Default for Options {
     fn default() -> Self {
-        Self { language: None, diarize: true, max_speakers: 6 }
+        Self { language: None, diarize: true, max_speakers: 6, initial_prompt: Some(VERBATIM_PROMPT.to_string()) }
     }
 }
 

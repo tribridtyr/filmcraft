@@ -193,6 +193,8 @@ fn options(s: &Session, p: &Value) -> Options {
         },
         diarize: bool_p(p, "diarize").unwrap_or(ma.speaker_labeling != "off"),
         max_speakers: u64_p(p, "maxSpeakers").map(|n| n.clamp(1, 32) as usize).unwrap_or(Options::default().max_speakers),
+        // keep "um"/"uh" in the transcript (the Filler filter needs them); `verbatim:false` tidies them away
+        initial_prompt: bool_p(p, "verbatim").unwrap_or(true).then(|| filmcraft_speech::VERBATIM_PROMPT.to_string()),
     }
 }
 
@@ -1029,7 +1031,7 @@ pub fn commands() -> Vec<CommandSpec> {
             "transcript.generate",
             "Transcribe…",
             &["Sequence", "Transcript"],
-            r#"{"items":[id]?,"model":"whisper-large-v3-turbo"?,"language":"en|auto"?,"diarize":bool?,"maxSpeakers":n?,"download":bool?,"wait":bool?}"#,
+            r#"{"items":[id]?,"model":"whisper-large-v3-turbo"?,"language":"en|auto"?,"diarize":bool?,"maxSpeakers":n?,"verbatim":bool?,"download":bool?,"wait":bool?}"#,
             can_transcribe,
             generate,
             true,

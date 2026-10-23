@@ -18,8 +18,11 @@
 //!    softmaxed over the window's audio frames, standardised per token, median-filtered (width 7)
 //!    and averaged; dynamic time warping through the negated matrix gives each token's start frame
 //!    (20 ms resolution). Tokens are grouped into words at spaces, punctuation joins its word.
-//!
-//! 6. Word bounds are tightened past silent frames ([`crate::vad`]), so pauses stay pauses.
+//! 6. The optional [`Options::initial_prompt`] (by default [`crate::VERBATIM_PROMPT`]) goes in
+//!    front of every window as `<|startofprev|> text` (Whisper's "previous dialogue"). Whisper
+//!    imitates its style, so a prompt with "um" and "uh" makes it keep fillers instead of tidying
+//!    them away.
+//! 7. Word bounds are tightened past silent frames ([`crate::vad`]), so pauses stay pauses.
 //!
 //! Optional speaker labelling runs afterwards ([`crate::diarize`]).
 
@@ -43,6 +46,8 @@ const N_FRAMES: usize = 3000;
 const FRAMES_PER_TS: usize = 2;
 const SAMPLES_PER_FRAME: usize = crate::mel::HOP;
 const MAX_TOKENS: usize = 224;
+/// Longest prompt (start-of-previous token included) fed before each window.
+const PROMPT_TOKENS: usize = 64;
 
 fn merr(e: candle_core::Error) -> SpeechError {
     SpeechError::Model(e.to_string())
@@ -265,6 +270,7 @@ impl Transcriber for Whisper {
         if language.as_deref().is_some_and(|l| self.tok.multilingual() && self.tok.language_token(l).is_none()) {
             return Err(SpeechError::Model(format!("the model does not know the language `{}`", language.unwrap_or_default())));
         }
+        let prefix = opts.initial_prompt.as_deref().map(|p| self.tok.prompt_tokens(p, PROMPT_TOKENS)).unwrap_or_default();
         let mut words: Vec<Word> = Vec::new();
         let mut seek = 0usize;
         while seek < content_frames {
@@ -279,7 +285,9 @@ impl Transcriber for Whisper {
             if trace {
                 eprintln!("encode {:.3}s", clock.elapsed().as_secs_f64());
             }
-            let mut prompt = vec![self.tok.sot];
+            // optional "previous dialogue" (disfluent text) so Whisper keeps um/uh
+            let mut prompt = prefix.clone();
+            prompt.push(self.tok.sot);
             if self.tok.multilingual() {
                 if language.is_none() {
                     language = Some(self.detect_language(&mut m, &xa)?);

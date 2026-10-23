@@ -311,7 +311,7 @@ The biggest gaps today:
 - **No plugins.** No VST3 / Audio Units or OpenFX hosting.
 - **Delivery codecs.** H.264 is our only software delivery-codec export; H.265 (8-bit Main, SDR) exports only through a hardware encoder (NVIDIA on Windows, VideoToolbox on macOS); no AV1 export yet.
 - **Real-world media and platforms.** Our decoders are bit-exact on conformance streams, but camera and phone files in the wild are less tested. Windows and Linux get far less testing than macOS.
-- **AI features.** Few so far; speech to text is optional and off by default.
+- **AI features.** Few so far. Speech to text (local Whisper large-v3-turbo) is on by default and bundled in the macOS app; there is no generative or media-intelligence search yet.
 
 Bug reports with real footage are the most useful thing you can send us: [open an issue](https://github.com/storytold/filmcraft/issues) or tell us in [Discord](https://discord.gg/artcraft).
 
