@@ -15,7 +15,8 @@ default = []
 whisper = ["dep:candle-core", "dep:candle-nn"]
 # Run Whisper on the Apple GPU through candle's Metal backend (objc2-metal bindings; the Metal
 # shaders are compiled by macOS at first use). Optional, like VideoToolbox decoding: the CPU path
-# stays the tested fallback, and `load` falls back to it when no Metal device can be created.
+# stays the tested fallback, and `load` falls back to it when no Metal device can be created or the
+# device fails a small convolution/matmul probe (as some Intel Macs' integrated GPUs do).
 metal = ["whisper", "candle-core/metal", "candle-nn/metal"]
 # Model downloads over HTTPS (pure-Rust TLS: rustls + RustCrypto, OS certificate verification).
 download = ["dep:ureq", "dep:rustls", "dep:rustls-rustcrypto", "dep:sha2"]

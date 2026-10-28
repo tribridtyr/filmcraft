@@ -139,9 +139,13 @@ pub fn load(models_dir: &std::path::Path, id: &str) -> Result<std::sync::Arc<dyn
     #[cfg(feature = "whisper")]
     {
         let dir = models::model_dir(models_dir, m);
-        // the Apple GPU in half precision when there is one; the CPU is the tested fallback
+        // the Apple GPU in half precision when there is one and it passes a probe; the CPU is the
+        // tested fallback. (Some Macs, such as Intel ones with integrated graphics, hand out a Metal
+        // device that loads the model fine and then panics inside the first convolution, so only
+        // a real operation proves the device works.)
         #[cfg(feature = "metal")]
         if let Ok(gpu) = candle_core::Device::new_metal(0)
+            && device_works(&gpu, candle_core::DType::F16)
             && let Ok(w) = whisper::Whisper::load_with(&dir, m.id, gpu, candle_core::DType::F16)
         {
             return Ok(std::sync::Arc::new(w));
@@ -152,6 +156,32 @@ pub fn load(models_dir: &std::path::Path, id: &str) -> Result<std::sync::Arc<dyn
     {
         Err(SpeechError::Unavailable("built without the `whisper` feature".into()))
     }
+}
+
+/// Whether `run` finishes without an error and without panicking. A panic inside a GPU driver
+/// binding must never take the app down, so it counts as "this device does not work".
+#[cfg(feature = "whisper")]
+#[cfg(any(feature = "metal", test))]
+fn survives(run: impl FnOnce() -> candle_core::Result<()>) -> bool {
+    matches!(std::panic::catch_unwind(std::panic::AssertUnwindSafe(run)), Ok(Ok(())))
+}
+
+/// Whether `dev` can run the operations Whisper starts with: a 1-D convolution (which lowers to a
+/// matrix multiply) and a plain matrix multiply, read back so the device has really finished.
+#[cfg(feature = "whisper")]
+#[cfg(any(feature = "metal", test))]
+fn device_works(dev: &candle_core::Device, dtype: candle_core::DType) -> bool {
+    use candle_core::{DType, Tensor};
+    survives(|| {
+        let x = Tensor::zeros((1, 4, 16), dtype, dev)?;
+        let k = Tensor::zeros((4, 4, 3), dtype, dev)?;
+        let y = x.conv1d(&k, 1, 1, 1, 1)?;
+        let m = Tensor::zeros((8, 8), dtype, dev)?;
+        let z = m.matmul(&m)?;
+        y.to_dtype(DType::F32)?.flatten_all()?.to_vec1::<f32>()?;
+        z.to_dtype(DType::F32)?.flatten_all()?.to_vec1::<f32>()?;
+        Ok(())
+    })
 }
 
 /// Whether this build can run speech models.
@@ -219,6 +249,23 @@ mod tests {
         assert_eq!(out.words.len(), 1);
         assert_eq!(out.source, "fixed");
         assert_eq!(f.transcribe(&[], &Options::default(), &mut |_, _| false), Err(SpeechError::Cancelled));
+    }
+
+    /// Regression: on a Mac whose Metal device reports no architecture, the first convolution
+    /// panicked on the transcription thread and every transcription failed. The probe must turn
+    /// such a panic (or an error) into "device unusable" so `load` falls back to the CPU.
+    #[cfg(feature = "whisper")]
+    #[test]
+    fn probe_treats_panics_and_errors_as_unusable() {
+        assert!(survives(|| Ok(())));
+        assert!(!survives(|| Err(candle_core::Error::Msg("no device".into()))));
+        assert!(!survives(|| panic!("unexpected NULL returned from -[MTLIGAccelDevice architecture]")));
+    }
+
+    #[cfg(feature = "whisper")]
+    #[test]
+    fn cpu_passes_the_device_probe() {
+        assert!(device_works(&candle_core::Device::Cpu, candle_core::DType::F32));
     }
 
     #[test]
