@@ -410,3 +410,36 @@ fn edit_words_refuses_bad_input_without_changing_anything() {
     s.execute("transcript.editWords", json!({"from": 2, "to": 0, "text": "A b c"})).unwrap();
     assert_eq!(&words(&mut s)[..3], ["A", "b", "c"]);
 }
+
+/// A recogniser that always fails, like a model that cannot run on this machine.
+struct Failing;
+
+impl filmcraft_speech::Transcriber for Failing {
+    fn id(&self) -> String {
+        "failing".into()
+    }
+    fn transcribe(&self, _: &[f32], _: &filmcraft_speech::Options, _: filmcraft_speech::ProgressFn) -> Result<Transcript, filmcraft_speech::SpeechError> {
+        Err(filmcraft_speech::SpeechError::Model("device unusable".into()))
+    }
+}
+
+/// Regression: a failed transcription used to vanish without a word (no toast, nothing in the
+/// log), so nobody could tell why the panel went back to "Transcribe".
+#[test]
+fn a_failed_transcription_is_reported() {
+    let (mut s, item, _) = session();
+    s.transcriber = Some(Arc::new(Failing));
+    s.drain_events();
+    let r = s.execute("transcript.generate", json!({"items": [item.0]}));
+    assert!(r.is_err(), "the run reports the failure: {r:?}");
+    let toasts: Vec<String> = s
+        .drain_events()
+        .into_iter()
+        .filter_map(|e| match e {
+            crate::Event::Toast { message, error: true } => Some(message),
+            _ => None,
+        })
+        .collect();
+    assert!(toasts.iter().any(|m| m.contains("device unusable")), "an error toast names the cause: {toasts:?}");
+    assert!(s.project.transcripts.is_empty());
+}

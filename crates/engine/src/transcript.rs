@@ -382,6 +382,9 @@ fn start(s: &mut Session, p: &Value, work: Vec<Work>, skipped: Vec<u64>, rec: Re
             done.push((w.item, tr));
         }
         let secs = t0.elapsed().as_secs_f64();
+        if let Some(e) = err.as_deref().filter(|e| *e != "stopped") {
+            log::error!("transcription failed: {e}");
+        }
         let words: usize = done.iter().map(|(_, t)| t.words.len()).sum();
         status(match &err {
             Some(e) if e == "stopped" => "Stopped: nothing was changed".into(),
@@ -436,7 +439,17 @@ pub fn poll(s: &mut Session) {
             i += 1;
             continue;
         }
+        // why the job failed, if it did (a stop is not a failure): without this the error was
+        // dropped and a failed transcription just vanished from the panel
+        let failure = job.and_then(|j| match &*lock(&j.result) {
+            Some(Err(e)) if !cancelled && e != "stopped" => Some(e.clone()),
+            _ => None,
+        });
         let pj = s.transcribe_jobs.remove(i);
+        if let Some(e) = failure {
+            s.error_toast("transcript.generate", format!("Transcribe failed: {e}"));
+            continue;
+        }
         let Some(done) = lock(&pj.results).take().filter(|d| !cancelled && !d.is_empty()) else { continue };
         let label = if pj.voice_only { "Find Pauses" } else { "Transcribe" };
         let r = s.edit(label, move |pr, _| {

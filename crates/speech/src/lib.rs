@@ -144,7 +144,8 @@ pub fn load(models_dir: &std::path::Path, id: &str) -> Result<std::sync::Arc<dyn
         // device that loads the model fine and then panics inside the first convolution, so only
         // a real operation proves the device works.)
         #[cfg(feature = "metal")]
-        if let Ok(gpu) = candle_core::Device::new_metal(0)
+        if metal_allowed()
+            && let Ok(gpu) = candle_core::Device::new_metal(0)
             && device_works(&gpu, candle_core::DType::F16)
             && let Ok(w) = whisper::Whisper::load_with(&dir, m.id, gpu, candle_core::DType::F16)
         {
@@ -156,6 +157,16 @@ pub fn load(models_dir: &std::path::Path, id: &str) -> Result<std::sync::Arc<dyn
     {
         Err(SpeechError::Unavailable("built without the `whisper` feature".into()))
     }
+}
+
+/// Whether this build may try the Metal GPU at all. Intel Macs (x86_64) are skipped: their
+/// integrated GPUs (`MTLIGAccelDevice`) report no architecture to candle's Metal kernels, which
+/// panicked inside the first convolution, and Whisper is not fast there anyway. Apple Silicon
+/// (aarch64) is where the GPU path is meant to run.
+#[cfg(feature = "whisper")]
+#[cfg(any(feature = "metal", test))]
+const fn metal_allowed() -> bool {
+    !cfg!(target_arch = "x86_64")
 }
 
 /// Whether `run` finishes without an error and without panicking. A panic inside a GPU driver
@@ -260,6 +271,13 @@ mod tests {
         assert!(survives(|| Ok(())));
         assert!(!survives(|| Err(candle_core::Error::Msg("no device".into()))));
         assert!(!survives(|| panic!("unexpected NULL returned from -[MTLIGAccelDevice architecture]")));
+    }
+
+    /// Regression: Intel Macs (x86_64) never take the Metal path.
+    #[cfg(all(feature = "whisper", target_arch = "x86_64"))]
+    #[test]
+    fn intel_never_uses_metal() {
+        assert!(!metal_allowed());
     }
 
     #[cfg(feature = "whisper")]
